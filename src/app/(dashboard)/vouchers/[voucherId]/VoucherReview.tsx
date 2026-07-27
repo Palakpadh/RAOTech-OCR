@@ -24,6 +24,7 @@ interface Line {
 
 interface Voucher {
   id: string;
+  invoiceId?: string | null;
   voucherType: string;
   status: string;
   date: string;
@@ -36,6 +37,21 @@ interface Voucher {
 }
 
 const money = (n: number) => `₹${(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+
+function formatItemAmount(item: Record<string, any>) {
+  return Number(item.debit ?? item.price ?? item.amount ?? item.total ?? item.credit ?? 0);
+}
+
+function getItemLabel(item: Record<string, any>) {
+  return (
+    String(item.selected_item_name ?? item.item_name ?? item.name ?? item.description ?? "Item").trim() ||
+    "Item"
+  );
+}
+
+function getExtractedItemLabel(item: Record<string, any>) {
+  return String(item.item_name ?? item.name ?? item.description ?? "Item").trim() || "Item";
+}
 
 function ConfidenceChip({ line }: { line: Line }) {
   if (!line.ledgerId)
@@ -72,6 +88,15 @@ export default function VoucherReview({
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stage, setStage] = useState<"items" | "ledger">(() => {
+    const extractedItems = initial.invoice?.extractedData?.items;
+    const hasPendingItemReview = Array.isArray(extractedItems) && extractedItems.length > 0 && !initial.invoice?.extractedData?.item_name_mapping_complete;
+    return hasPendingItemReview ? "items" : "ledger";
+  });
+  const [itemNames, setItemNames] = useState<string[]>(() => {
+    const extractedItems = Array.isArray(initial.invoice?.extractedData?.items) ? initial.invoice.extractedData.items : [];
+    return extractedItems.map((item: Record<string, any>) => getItemLabel(item));
+  });
   const [phase, setPhase] = useState<SyncPhase>(
     initial.status === "EXPORTED_DEMO" || initial.status === "APPROVED" ? "synced" : "idle"
   );
@@ -79,6 +104,16 @@ export default function VoucherReview({
   const firstUnmappedRef = useRef<LedgerSelectHandle | null>(null);
 
   const inv = initial.invoice || {};
+  const invoiceId = initial.invoice?.id ?? null;
+  const extractedItems = Array.isArray(inv.extractedData?.items) ? inv.extractedData.items : [];
+  const itemNameOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const item of extractedItems) {
+      const label = getExtractedItemLabel(item);
+      if (!seen.has(label)) seen.add(label);
+    }
+    return Array.from(seen);
+  }, [extractedItems]);
   const hasUnmapped = lines.some((l) => l.ledgerId === null);
   const totalDebit = useMemo(() => lines.reduce((s, l) => s + l.debit, 0), [lines]);
   const totalCredit = useMemo(() => lines.reduce((s, l) => s + l.credit, 0), [lines]);
@@ -109,6 +144,36 @@ export default function VoucherReview({
     }).catch(() => {});
   }
 
+  function updateItemName(index: number, nextName: string) {
+    setItemNames((prev) => prev.map((value, i) => (i === index ? nextName : value)));
+  }
+
+  function buildPersistedExtractedData() {
+    const updatedItems = extractedItems.map((item: Record<string, any>, index: number) => ({
+      ...item,
+      selected_item_name: itemNames[index] || getItemLabel(item),
+    }));
+    return {
+      ...inv.extractedData,
+      items: updatedItems,
+      item_name_mapping_complete: true,
+    };
+  }
+
+  async function persistItemNames() {
+    if (!invoiceId || !extractedItems.length) return;
+
+    const res = await fetch(`/api/invoices/${invoiceId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ extractedData: buildPersistedExtractedData() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to save item names");
+    }
+  }
+
   async function changeType(next: string) {
     if (next === voucherType || locked) return;
     setSaving(true);
@@ -129,16 +194,37 @@ export default function VoucherReview({
     }
   }
 
-  function save() {
+  function saveLedgerMapping() {
     setError(null);
-    setSavedFlash(true);
-    persistLinesInBackground();
-    toast("Mapping saved", "success");
-    window.setTimeout(() => setSavedFlash(false), 1500);
+    setSaving(true);
+    (async () => {
+      try {
+        await persistItemNames();
+        persistLinesInBackground();
+        setSavedFlash(true);
+        toast("Mapping saved", "success");
+        window.setTimeout(() => setSavedFlash(false), 1500);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to save mapping";
+        setError(message);
+        toast(message, "error");
+      } finally {
+        setSaving(false);
+      }
+    })();
+  }
+
+  async function saveCurrentStep() {
+    if (stage === "items") {
+      setStage("ledger");
+      toast("Item names ready for final save", "success");
+      return;
+    }
+    saveLedgerMapping();
   }
 
   async function approveAndExport() {
-    if (hasUnmapped || !balanced) return;
+    if (stage === "items" || hasUnmapped || !balanced) return;
     setError(null);
     persistLinesInBackground();
 
@@ -185,12 +271,12 @@ export default function VoucherReview({
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement)
         return;
       const key = e.key.toLowerCase();
-      if (key === "a" && !locked) {
+      if (key === "a" && !locked && stage === "ledger") {
         e.preventDefault();
         approveAndExport();
       } else if (key === "s") {
         e.preventDefault();
-        save();
+        void saveCurrentStep();
       } else if (key === "e" && !locked) {
         e.preventDefault();
         firstUnmappedRef.current?.focusOpen();
@@ -220,17 +306,21 @@ export default function VoucherReview({
               <CheckCircle2 className="h-4 w-4" /> {status === "EXPORTED_DEMO" ? "Exported XML" : "Synced"}
             </span>
           )}
-          <Button variant="outline" onClick={save} disabled={locked}>
+          <Button variant="outline" onClick={saveCurrentStep} disabled={locked || saving}>
             {savedFlash ? <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" /> : <Save className="mr-2 h-4 w-4" />}
-            {savedFlash ? "Saved" : "Save mapping"}
+            {savedFlash ? "Saved" : stage === "items" ? "Save item names" : "Save mapping"}
           </Button>
         </div>
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ledger Mapping</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {stage === "items" ? "Item Name Mapping" : "Ledger Mapping"}
+        </h1>
         <p className="text-gray-500 text-sm mt-1">
-          Assign ledgers, approve, then download Tally XML.
+          {stage === "items"
+            ? "Review the extracted item names first, then continue to ledger mapping."
+            : "Assign ledgers, approve, then download Tally XML."}
         </p>
       </div>
 
@@ -297,102 +387,172 @@ export default function VoucherReview({
         </div>
 
         <div className="border rounded-xl bg-white shadow-sm">
-          <div className="p-4 border-b bg-gray-50/50 flex items-center justify-between gap-2 flex-wrap">
-            <span className="font-semibold">Voucher</span>
-            <div className="flex rounded-lg border overflow-hidden text-xs">
-              {TYPES.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => changeType(t)}
-                  disabled={saving || locked}
-                  className={`px-2 py-1.5 ${voucherType === t ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-                >
-                  {t.replace("_", " ")}
-                </button>
-              ))}
-            </div>
-          </div>
+          {stage === "items" ? (
+            <>
+              <div className="p-4 border-b bg-gray-50/50 flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <span className="font-semibold">Item Name Mapping</span>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Choose the item name for each extracted line, then continue to ledger mapping.
+                  </p>
+                </div>
+                <Button onClick={saveCurrentStep} disabled={saving || locked}>
+                  {saving ? "Saving…" : "Save item names & continue"}
+                </Button>
+              </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-gray-500 bg-gray-50 uppercase text-xs">
-                <tr>
-                  <th className="px-3 py-2 text-left">Ledger</th>
-                  <th className="px-3 py-2 text-right">Debit</th>
-                  <th className="px-3 py-2 text-right">Credit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  let assignedUnmappedRef = false;
-                  return lines.map((l) => {
-                    const isFirstUnmapped =
-                      !assignedUnmappedRef &&
-                      EDITABLE_ROLES.has(l.role) &&
-                      !l.ledgerId &&
-                      !locked;
-                    if (isFirstUnmapped) assignedUnmappedRef = true;
-                    return (
-                  <tr key={l.id} className="border-b align-top">
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-gray-400 w-14">{l.role}</span>
-                        <ConfidenceChip line={l} />
-                      </div>
-                      {EDITABLE_ROLES.has(l.role) && !locked ? (
-                        <LedgerSelect
-                          ref={isFirstUnmapped ? firstUnmappedRef : undefined}
-                          ledgers={ledgers}
-                          value={l.ledgerId}
-                          onChange={(id) => setLineLedger(l.id, id)}
-                          onCreated={(led) => setLedgers((prev) => [...prev, led])}
-                        />
-                      ) : (
-                        <span className="text-gray-800">{l.ledgerNameSnapshot || "—"}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium">{l.debit ? money(l.debit) : ""}</td>
-                    <td className="px-3 py-2 text-right font-medium">{l.credit ? money(l.credit) : ""}</td>
-                  </tr>
-                    );
-                  });
-                })()}
-              </tbody>
-              <tfoot>
-                <tr className="font-semibold bg-gray-50">
-                  <td className="px-3 py-2 text-right">Total</td>
-                  <td className="px-3 py-2 text-right">{money(totalDebit)}</td>
-                  <td className="px-3 py-2 text-right">{money(totalCredit)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <div className="p-3 text-xs text-gray-500 border-t">
-            {balanced ? (
-              <span className="text-green-600">● Balanced</span>
-            ) : (
-              <span className="text-red-600">● Not balanced — difference {money(Math.abs(totalDebit - totalCredit))}</span>
-            )}
-            {hasUnmapped && <span className="ml-3 text-red-600">● Assign all ledgers to send</span>}
-          </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-gray-500 bg-gray-50 uppercase text-xs">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Item name</th>
+                      <th className="px-3 py-2 text-right">Debit</th>
+                      <th className="px-3 py-2 text-right">Credit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extractedItems.map((item: Record<string, any>, index: number) => {
+                      const currentName = itemNames[index] || getItemLabel(item);
+                      const amount = formatItemAmount(item);
+                      return (
+                        <tr key={`${currentName}-${index}`} className="border-b align-top">
+                          <td className="px-3 py-2">
+                            <select
+                              className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-gray-400"
+                              value={currentName}
+                              onChange={(e) => updateItemName(index, e.target.value)}
+                              disabled={locked}
+                            >
+                              {itemNameOptions.map((name) => (
+                                <option key={name} value={name}>
+                                  {name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium">{amount ? money(amount) : ""}</td>
+                          <td className="px-3 py-2 text-right font-medium">{item.credit ? money(Number(item.credit)) : ""}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-semibold bg-gray-50">
+                      <td className="px-3 py-2 text-right">Total</td>
+                      <td className="px-3 py-2 text-right">{money(totalDebit)}</td>
+                      <td className="px-3 py-2 text-right">{money(totalCredit)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="p-3 text-xs text-gray-500 border-t">
+                Saved item names will be written back to the invoice before the ledger mapping step.
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="p-4 border-b bg-gray-50/50 flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-semibold">Voucher</span>
+                <div className="flex rounded-lg border overflow-hidden text-xs">
+                  {TYPES.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => changeType(t)}
+                      disabled={saving || locked}
+                      className={`px-2 py-1.5 ${voucherType === t ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                    >
+                      {t.replace("_", " ")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-gray-500 bg-gray-50 uppercase text-xs">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Ledger</th>
+                      <th className="px-3 py-2 text-right">Debit</th>
+                      <th className="px-3 py-2 text-right">Credit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      let assignedUnmappedRef = false;
+                      return lines.map((l, index) => {
+                        const isFirstUnmapped =
+                          !assignedUnmappedRef &&
+                          EDITABLE_ROLES.has(l.role) &&
+                          !l.ledgerId &&
+                          !locked;
+                        if (isFirstUnmapped) assignedUnmappedRef = true;
+                        const itemLabel = l.role === "ITEM" ? itemNames[index] || getItemLabel(extractedItems[index] || {}) : null;
+                        return (
+                          <tr key={l.id} className="border-b align-top">
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-gray-400 w-14">{l.role}</span>
+                                <ConfidenceChip line={l} />
+                              </div>
+                              {itemLabel && <div className="text-xs text-gray-500 mb-1">{itemLabel}</div>}
+                              {EDITABLE_ROLES.has(l.role) && !locked ? (
+                                <LedgerSelect
+                                  ref={isFirstUnmapped ? firstUnmappedRef : undefined}
+                                  ledgers={ledgers}
+                                  value={l.ledgerId}
+                                  onChange={(id) => setLineLedger(l.id, id)}
+                                  onCreated={(led) => setLedgers((prev) => [...prev, led])}
+                                />
+                              ) : (
+                                <span className="text-gray-800">{l.ledgerNameSnapshot || "—"}</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right font-medium">{l.debit ? money(l.debit) : ""}</td>
+                            <td className="px-3 py-2 text-right font-medium">{l.credit ? money(l.credit) : ""}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-semibold bg-gray-50">
+                      <td className="px-3 py-2 text-right">Total</td>
+                      <td className="px-3 py-2 text-right">{money(totalDebit)}</td>
+                      <td className="px-3 py-2 text-right">{money(totalCredit)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="p-3 text-xs text-gray-500 border-t">
+                {balanced ? (
+                  <span className="text-green-600">● Balanced</span>
+                ) : (
+                  <span className="text-red-600">● Not balanced — difference {money(Math.abs(totalDebit - totalCredit))}</span>
+                )}
+                {hasUnmapped && <span className="ml-3 text-red-600">● Assign all ledgers to send</span>}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      <button
-        onClick={approveAndExport}
-        disabled={hasUnmapped || !balanced || saving || locked}
-        className={`fixed bottom-6 left-6 md:left-[19.5rem] z-40 inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold shadow-lg transition
-          ${
-            locked
-              ? "bg-emerald-600 text-white cursor-default"
-              : hasUnmapped || !balanced
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-[#0b6b3a] text-white hover:bg-[#0a5c32] hover:shadow-xl"
-          }`}
-      >
-        {locked ? <Download className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-        {locked ? "Exported to Tally XML" : "Approve & Export Tally XML"}
-      </button>
+      {stage === "ledger" && (
+        <button
+          onClick={approveAndExport}
+          disabled={hasUnmapped || !balanced || saving || locked}
+          className={`fixed bottom-6 left-6 md:left-[19.5rem] z-40 inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold shadow-lg transition
+            ${
+              locked
+                ? "bg-emerald-600 text-white cursor-default"
+                : hasUnmapped || !balanced
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-[#0b6b3a] text-white hover:bg-[#0a5c32] hover:shadow-xl"
+            }`}
+        >
+          {locked ? <Download className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+          {locked ? "Exported to Tally XML" : "Approve & Export Tally XML"}
+        </button>
+      )}
 
       {phase !== "idle" && (
         <TallySyncOverlay

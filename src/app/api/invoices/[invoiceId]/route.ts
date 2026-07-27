@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { cleanDate } from "@/lib/accounting/normalize";
 
 const cleanMoney = (val: any): number => {
   if (typeof val === "number") return val;
@@ -61,7 +62,7 @@ export async function PATCH(
       where: { id: invoiceId },
       data: {
         invoiceNumber: extractedData.invoice_number || existingInvoice.invoiceNumber,
-        date: extractedData.date ? new Date(extractedData.date) : existingInvoice.date,
+        date: extractedData.date ? cleanDate(extractedData.date) : existingInvoice.date,
         totalAmount: cleanMoney(extractedData.total_amount),
         taxAmount: cleanMoney(extractedData.tax),
 

@@ -71,7 +71,12 @@ function normalizeItems(raw: unknown): NormalizedItem[] {
     .map((it): NormalizedItem | null => {
       if (!it || typeof it !== "object") return null;
       const o = it as Record<string, unknown>;
-      const name = str(o.name) ?? str(o.description) ?? "Item";
+      const name =
+        str(o.selected_item_name) ??
+        str(o.item_name) ??
+        str(o.name) ??
+        str(o.description) ??
+        "Item";
       const qty = cleanMoney(o.qty ?? o.quantity);
       const rate = cleanMoney(o.rate);
       // price/amount/line total — fall back to qty*rate when missing
