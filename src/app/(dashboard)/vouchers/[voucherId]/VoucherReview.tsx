@@ -406,16 +406,21 @@ export default function VoucherReview({
                   <thead className="text-gray-500 bg-gray-50 uppercase text-xs">
                     <tr>
                       <th className="px-3 py-2 text-left">Item name</th>
+                      <th className="px-3 py-2 text-left">Select item name</th>
                       <th className="px-3 py-2 text-right">Debit</th>
                       <th className="px-3 py-2 text-right">Credit</th>
                     </tr>
                   </thead>
                   <tbody>
                     {extractedItems.map((item: Record<string, any>, index: number) => {
+                      const extractedName = getExtractedItemLabel(item);
                       const currentName = itemNames[index] || getItemLabel(item);
                       const amount = formatItemAmount(item);
                       return (
-                        <tr key={`${currentName}-${index}`} className="border-b align-top">
+                        <tr key={`${extractedName}-${index}`} className="border-b align-top">
+                          <td className="px-3 py-2">
+                            <span className="font-medium text-gray-800">{extractedName}</span>
+                          </td>
                           <td className="px-3 py-2">
                             <select
                               className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-gray-400"
