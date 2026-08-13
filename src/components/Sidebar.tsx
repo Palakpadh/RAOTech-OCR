@@ -34,7 +34,11 @@ const routes = [
   { label: "AI Assistant", icon: MessageSquare, href: "/chat", color: "text-pink-700" },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  onNavigate?: () => void;
+};
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const showExtraPages = extraPagesEnabled();
   const visibleRoutes = routes.filter((route) => showExtraPages || !route.localOnly);
@@ -50,6 +54,7 @@ export function Sidebar() {
             <Link
               key={route.href}
               href={route.href}
+              onClick={onNavigate}
               className={cn(
                 "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
                 pathname === route.href || pathname.startsWith(route.href + "/")
@@ -67,7 +72,10 @@ export function Sidebar() {
       </div>
       <div className="px-3 py-2">
         <SignOutButton>
-          <div className="flex items-center p-3 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer transition">
+          <div
+            className="flex items-center p-3 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer transition"
+            onClick={onNavigate}
+          >
             <LogOut className="h-5 w-5 mr-3 text-red-500" />
             Logout
           </div>
