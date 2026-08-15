@@ -1,15 +1,43 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button"; // Run: npx shadcn@latest add button
 import { ArrowRight, BarChart3, FileText, Zap } from "lucide-react";
 
 export default function LandingPage() {
+  const [currentDateTime, setCurrentDateTime] = useState("");
+
+  useEffect(() => {
+    const updateDateTime = () => {
+      setCurrentDateTime(
+        new Date().toLocaleString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      );
+    };
+
+    updateDateTime();
+    const intervalId = setInterval(updateDateTime, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navbar */}
       <header className="px-4 lg:px-6 h-14 flex items-center border-b">
-        <Link className="flex items-center justify-center font-bold text-xl" href="#">
-          RAO AI
-        </Link>
+        <div className="flex flex-col items-start leading-none">
+          <Link className="flex items-center justify-center font-bold text-2xl" href="#">
+            RAO AI
+          </Link>
+          <span className="mt-1 text-xs font-medium text-gray-500 tracking-wide">{currentDateTime || "--"}</span>
+        </div>
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link href="/dashboard">
             <Button>Login / Get Started</Button>
@@ -19,8 +47,19 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-gray-50">
+        <section className="w-full pt-4 pb-12 md:pt-6 md:pb-24 lg:pt-8 lg:pb-32 xl:pt-10 xl:pb-48 bg-gray-50">
           <div className="container px-4 md:px-6 mx-auto text-center">
+            <div className="mx-auto mb-6 w-full max-w-4xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <video
+                className="aspect-video w-full object-cover"
+                src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls={false}
+              />
+            </div>
             <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
               Manage Invoices with <span className="text-blue-600">AI Precision</span>
             </h1>
