@@ -49,7 +49,7 @@ export default function LandingPage() {
       <main className="flex-1">
         <section className="w-full pt-0 pb-8 md:pb-12 lg:pb-16 xl:pb-20 bg-gray-50">
           <div className="mx-auto text-center">
-            <div className="mb-4 w-full overflow-hidden border border-gray-200 bg-white shadow-sm">
+            <div className="relative mb-4 w-full overflow-hidden bg-gray-50 shadow-none">
               <video
                 className="block aspect-video w-full object-cover"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
@@ -59,6 +59,7 @@ export default function LandingPage() {
                 playsInline
                 controls={false}
               />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent" />
             </div>
             <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
               Manage Invoices with <span className="text-blue-600">AI Precision</span>
