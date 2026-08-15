@@ -78,23 +78,50 @@ export default function LandingPage() {
         </section>
 
         {/* Features Grid */}
-        <section className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container px-4 md:px-6 mx-auto grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <FileText className="h-10 w-10 text-blue-500" />
-              <h2 className="text-xl font-bold">Smart OCR</h2>
-              <p className="text-gray-500">Auto-extract details from PDF, PNG, or Zip files instantly.</p>
-            </div>
-            <div className="flex flex-col items-center text-center space-y-2">
-              <Zap className="h-10 w-10 text-blue-500" />
-              <h2 className="text-xl font-bold">AI Chatbot</h2>
-              <p className="text-gray-500">Ask questions like "What was my total sales last October?"</p>
-            </div>
-            <div className="flex flex-col items-center text-center space-y-2">
-              <BarChart3 className="h-10 w-10 text-blue-500" />
-              <h2 className="text-xl font-bold">Analytics</h2>
-              <p className="text-gray-500">Visual dashboards for Monthly and Yearly sales trends.</p>
-            </div>
+        <section className="w-full pt-2 pb-0 md:pt-4 lg:pt-6">
+          <div className="mx-auto flex w-full flex-col gap-0">
+            {[
+              {
+                title: "Smart OCR",
+                description: "Auto-extract details from PDF, PNG, or Zip files instantly.",
+                icon: FileText,
+                align: "right",
+                image: "/static/ocr-image.jpg",
+              },
+              {
+                title: "AI Chatbot",
+                description: 'Ask questions like "What was my total sales last October?"',
+                icon: Zap,
+                align: "left",
+                image: "/static/chatbot-image.jpg",
+              },
+              {
+                title: "Analytics",
+                description: "Visual dashboards for Monthly and Yearly sales trends.",
+                icon: BarChart3,
+                align: "right",
+                image: "/static/analytics-image.jpg",
+              },
+            ].map(({ title, description, icon: Icon, align, image }) => (
+              <div key={title} className="w-full">
+                <div
+                  className="relative flex aspect-[16/9] w-full items-center overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8 md:px-8 md:py-10 lg:px-12 lg:py-12"
+                  style={{
+                    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.52), rgba(0,0,0,0.32)), url('${image}')`,
+                  }}
+                >
+                  <div className={`w-full ${align === "right" ? "flex justify-end" : "flex justify-start"}`}>
+                    <div className="max-w-lg text-left text-white">
+                      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
+                        <Icon className="h-7 w-7 text-white" />
+                      </div>
+                      <h2 className="text-4xl font-bold md:text-5xl lg:text-6xl">{title}</h2>
+                      <p className="mt-4 max-w-md text-base text-white/80 md:text-xl">{description}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </main>
