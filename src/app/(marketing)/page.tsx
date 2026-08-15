@@ -47,11 +47,11 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="w-full pt-4 pb-12 md:pt-6 md:pb-24 lg:pt-8 lg:pb-32 xl:pt-10 xl:pb-48 bg-gray-50">
-          <div className="container px-4 md:px-6 mx-auto text-center">
-            <div className="mx-auto mb-6 w-full max-w-4xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <section className="w-full pt-0 pb-8 md:pb-12 lg:pb-16 xl:pb-20 bg-gray-50">
+          <div className="mx-auto text-center">
+            <div className="mb-4 w-full overflow-hidden border border-gray-200 bg-white shadow-sm">
               <video
-                className="aspect-video w-full object-cover"
+                className="block aspect-video w-full object-cover"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
                 autoPlay
                 muted
