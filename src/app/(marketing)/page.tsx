@@ -31,25 +31,27 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navbar */}
-      <header className="px-4 lg:px-6 h-14 flex items-center border-b">
-        <div className="flex flex-col items-start leading-none">
-          <Link className="flex items-center justify-center font-bold text-2xl" href="#">
-            RAO AI
-          </Link>
-          <span className="mt-1 text-xs font-medium text-gray-500 tracking-wide">{currentDateTime || "--"}</span>
+      <header className="h-14 border-b border-white/10 bg-black px-4 text-white lg:px-6">
+        <div className="flex h-full items-center">
+          <div className="flex flex-col items-start leading-none">
+            <Link className="flex items-center justify-center font-bold text-2xl text-white" href="#">
+              RAO AI
+            </Link>
+            <span className="mt-1 text-xs font-medium tracking-wide text-white/70">{currentDateTime || "--"}</span>
+          </div>
+          <nav className="ml-auto flex gap-4 sm:gap-6">
+            <Link href="/dashboard">
+              <Button className="bg-white text-black hover:bg-white/90">Login / Get Started</Button>
+            </Link>
+          </nav>
         </div>
-        <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link href="/dashboard">
-            <Button>Login / Get Started</Button>
-          </Link>
-        </nav>
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1">
-        <section className="w-full pt-0 pb-8 md:pb-12 lg:pb-16 xl:pb-20 bg-gray-50">
+      <main className="flex-1 bg-black">
+        <section className="w-full pt-0 pb-0 bg-black">
           <div className="mx-auto text-center">
-            <div className="relative mb-4 w-full overflow-hidden bg-gray-50 shadow-none">
+            <div className="relative w-full overflow-hidden bg-black shadow-none">
               <video
                 className="block aspect-video w-full object-cover"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
@@ -59,20 +61,7 @@ export default function LandingPage() {
                 playsInline
                 controls={false}
               />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent" />
-            </div>
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
-              Manage Invoices with <span className="text-blue-600">AI Precision</span>
-            </h1>
-            <p className="mx-auto mt-4 max-w-[700px] text-gray-500 md:text-xl">
-              Upload bulk invoices, extract data automatically, and chat with your financial data using our RAG-powered AI.
-            </p>
-            <div className="mt-8">
-              <Link href="/dashboard">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                  Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black via-black/95 to-transparent" />
             </div>
           </div>
         </section>
