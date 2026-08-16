@@ -1,10 +1,21 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
+import type { Client as ClientRow } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getDbUser } from "@/lib/getDbUser";
 import { seedLedgersForUser } from "@/lib/accounting/seedLedgers";
+import { cacheGet, cacheSet, cacheDelete, TTL } from "@/lib/serverCache";
 
 export const ACTIVE_CLIENT_COOKIE = "active_client_id";
+
+export const clientCacheKey = (clientId: string) => `client:${clientId}`;
+export const clientListCacheKey = (userId: string) => `clients:${userId}`;
+
+/** Call after anything that changes a workspace's name/GSTIN or the user's list. */
+export function invalidateClientCaches(userId: string, clientId?: string) {
+  cacheDelete(clientListCacheKey(userId));
+  if (clientId) cacheDelete(clientCacheKey(clientId));
+}
 
 /**
  * The legacy backfill and the ledger seed are one-time-per-user jobs, but they
@@ -91,15 +102,23 @@ export const getActiveClient = cache(async () => {
   const cookieStore = await cookies();
   const cookieClientId = cookieStore.get(ACTIVE_CLIENT_COOKIE)?.value;
 
-  // Measured: each round trip to the Seoul pooler costs ~290ms, so the user
+  // Measured: each round trip to the Seoul pooler costs ~160-290ms, so the user
   // lookup and the workspace lookup are issued as one wave rather than in
   // sequence. The cookie already carries the workspace id, so the client row
   // can be fetched without waiting to learn the user's id — ownership is
   // verified below before the row is used for anything.
+  //
+  // On a warm instance both sides come from the in-process cache and the whole
+  // resolution costs nothing.
   const [user, cookieClient] = await Promise.all([
     getDbUser(),
     cookieClientId
-      ? prisma.client.findUnique({ where: { id: cookieClientId } })
+      ? cacheGet<ClientRow>(clientCacheKey(cookieClientId)) ??
+        prisma.client
+          .findUnique({ where: { id: cookieClientId } })
+          .then((row) =>
+            row ? cacheSet(clientCacheKey(row.id), row, TTL.client) : row
+          )
       : Promise.resolve(null),
   ]);
 

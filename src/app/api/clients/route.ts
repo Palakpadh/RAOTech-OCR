@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDbUser } from "@/lib/getDbUser";
+import { getDbUser, userCacheKey } from "@/lib/getDbUser";
 import {
   ACTIVE_CLIENT_COOKIE,
   ensureDefaultClient,
   getActiveClient,
+  clientListCacheKey,
+  invalidateClientCaches,
 } from "@/lib/clientContext";
 import { seedLedgersForUser } from "@/lib/accounting/seedLedgers";
+import { cacheGet, cacheSet, cacheDelete, TTL } from "@/lib/serverCache";
 
 // ClientSwitcher calls this on every page load. It used to run the full
 // user + workspace bootstrap three times over (getDbUser, listClientsForUser,
@@ -17,10 +20,19 @@ export async function GET() {
     const ctx = await getActiveClient();
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const clients = await prisma.client.findMany({
-      where: { userId: ctx.user.id },
-      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
-    });
+    // ClientSwitcher mounts on every page load, so this list is served from
+    // the in-process cache and invalidated explicitly when a client is created.
+    const listKey = clientListCacheKey(ctx.user.id);
+    const clients =
+      cacheGet<typeof ctx.client[]>(listKey) ??
+      cacheSet(
+        listKey,
+        await prisma.client.findMany({
+          where: { userId: ctx.user.id },
+          orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+        }),
+        TTL.clientList
+      );
 
     return NextResponse.json({
       clients,
@@ -58,6 +70,7 @@ export async function POST(req: Request) {
     });
 
     await seedLedgersForUser(prisma, user.id, client.id);
+    invalidateClientCaches(user.id);
 
     return NextResponse.json({ client });
   } catch (error: any) {
@@ -84,6 +97,8 @@ export async function PATCH(req: Request) {
       where: { id: user.id },
       data: { activeClientId: client.id },
     });
+    // The cached user row still carries the old activeClientId.
+    cacheDelete(userCacheKey(user.clerkId));
 
     const res = NextResponse.json({ activeClientId: client.id, client });
     res.cookies.set(ACTIVE_CLIENT_COOKIE, client.id, {
