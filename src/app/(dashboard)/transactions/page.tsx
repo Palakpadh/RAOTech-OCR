@@ -8,25 +8,52 @@ export default async function TransactionsPage() {
   if (!ctx) return redirect("/sign-in");
   const { user, client } = ctx;
 
+  const scope = { userId: user.id, clientId: client.id };
+
   const [vouchers, statements] = await Promise.all([
     prisma.voucher.findMany({
-      where: { userId: user.id, clientId: client.id },
+      where: scope,
       orderBy: { createdAt: "desc" },
-      include: {
+      // select, not include: include ships every scalar column on Voucher when
+      // the table below only renders six of them.
+      select: {
+        id: true,
+        voucherType: true,
+        totalDebit: true,
+        status: true,
+        avgConfidence: true,
         invoice: { select: { vendor: true, invoiceNumber: true, isDuplicate: true } },
         lines: { select: { ledgerId: true } },
       },
     }),
     prisma.bankStatement.findMany({
-      where: { userId: user.id, clientId: client.id },
+      where: scope,
       orderBy: { createdAt: "desc" },
-      include: {
-        txns: {
-          select: { ledgerId: true, deposit: true, withdrawal: true, classification: true },
-        },
-      },
+      select: { id: true, fileName: true, bankName: true, status: true },
     }),
   ]);
+
+  // Roll the per-statement totals up in Postgres instead of streaming every
+  // BankTxn row over the wire just to count and sum them.
+  const statementIds = statements.map((s) => s.id);
+  const [txnTotals, txnUnmapped] = statementIds.length
+    ? await Promise.all([
+        prisma.bankTxn.groupBy({
+          by: ["statementId"],
+          where: { statementId: { in: statementIds } },
+          _count: { _all: true },
+          _sum: { deposit: true, withdrawal: true },
+        }),
+        prisma.bankTxn.groupBy({
+          by: ["statementId"],
+          where: { statementId: { in: statementIds }, ledgerId: null },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []];
+
+  const totalsById = new Map(txnTotals.map((t) => [t.statementId, t]));
+  const unmappedById = new Map(txnUnmapped.map((t) => [t.statementId, t._count._all]));
 
   const voucherRows = vouchers.map((v) => ({
     id: v.id,
@@ -40,16 +67,19 @@ export default async function TransactionsPage() {
     confidence: v.avgConfidence,
   }));
 
-  const bankRows = statements.map((s) => ({
-    id: s.id,
-    fileName: s.fileName,
-    bankName: s.bankName,
-    status: s.status,
-    txnCount: s.txns.length,
-    unmapped: s.txns.filter((t) => t.ledgerId === null).length,
-    totalIn: s.txns.reduce((a, t) => a + (t.deposit || 0), 0),
-    totalOut: s.txns.reduce((a, t) => a + (t.withdrawal || 0), 0),
-  }));
+  const bankRows = statements.map((s) => {
+    const totals = totalsById.get(s.id);
+    return {
+      id: s.id,
+      fileName: s.fileName,
+      bankName: s.bankName,
+      status: s.status,
+      txnCount: totals?._count._all ?? 0,
+      unmapped: unmappedById.get(s.id) ?? 0,
+      totalIn: totals?._sum.deposit ?? 0,
+      totalOut: totals?._sum.withdrawal ?? 0,
+    };
+  });
 
   return <TransactionsList vouchers={voucherRows} statements={bankRows} />;
 }

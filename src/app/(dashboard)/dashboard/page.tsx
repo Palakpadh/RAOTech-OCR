@@ -1,4 +1,3 @@
-import { currentUser } from "@clerk/nextjs/server";
 import {
   Plus,
   Download,
@@ -17,54 +16,88 @@ import { getActiveClient } from "@/lib/clientContext";
 import { extraPagesEnabled } from "@/lib/featureFlags";
 
 export default async function Dashboard() {
-  const clerk = await currentUser();
-  if (!clerk) return redirect("/sign-in");
-
   const ctx = await getActiveClient();
   if (!ctx) return redirect("/sign-in");
   const { user, client } = ctx;
   const showExtraPages = extraPagesEnabled();
 
-  const [invoices, vouchers, latestRecon, unmappedParties] = await Promise.all([
-    prisma.invoice.findMany({
-      where: { userId: user.id, clientId: client.id },
-      orderBy: { createdAt: "desc" },
+  const scope = { userId: user.id, clientId: client.id };
+
+  // These used to be two unbounded findMany calls that pulled every invoice and
+  // every voucher (with their lines) across the wire, only to count them and
+  // slice off the first 20. Counting and summing in Postgres keeps the payload
+  // flat as the workspace grows.
+  const [
+    invoiceCount,
+    statusCounts,
+    pendingReviewCount,
+    latestRecon,
+    unmappedParties,
+    gstInputAgg,
+    gstOutputAgg,
+    draftPreview,
+  ] = await Promise.all([
+    prisma.invoice.count({ where: scope }),
+    prisma.voucher.groupBy({
+      by: ["status"],
+      where: scope,
+      _count: true,
     }),
-    prisma.voucher.findMany({
-      where: { userId: user.id, clientId: client.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        invoice: { select: { vendor: true, invoiceNumber: true, taxAmount: true } },
-        lines: { select: { ledgerId: true, role: true } },
+    prisma.voucher.count({
+      where: {
+        ...scope,
+        status: "DRAFT",
+        OR: [{ lines: { some: { ledgerId: null } } }, { avgConfidence: { lt: 0.7 } }],
       },
     }),
     prisma.gst2bUpload.findFirst({
-      where: { userId: user.id, clientId: client.id },
+      where: scope,
       orderBy: { createdAt: "desc" },
     }),
     prisma.voucherLine.count({
       where: {
         ledgerId: null,
         role: "PARTY",
-        voucher: { userId: user.id, clientId: client.id, status: "DRAFT" },
+        voucher: { ...scope, status: "DRAFT" },
+      },
+    }),
+    prisma.invoice.aggregate({
+      _sum: { taxAmount: true },
+      where: { voucher: { ...scope, voucherType: "PURCHASE" } },
+    }),
+    prisma.invoice.aggregate({
+      _sum: { taxAmount: true },
+      where: { voucher: { ...scope, voucherType: "SALE" } },
+    }),
+    prisma.voucher.findMany({
+      where: { ...scope, status: "DRAFT" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        voucherType: true,
+        totalDebit: true,
+        avgConfidence: true,
+        invoice: { select: { vendor: true, invoiceNumber: true } },
+        lines: { select: { ledgerId: true } },
       },
     }),
   ]);
 
-  const drafts = vouchers.filter((v) => v.status === "DRAFT");
-  const approved = vouchers.filter((v) => v.status === "APPROVED");
-  const exported = vouchers.filter((v) => v.status === "EXPORTED_DEMO" || v.status === "POSTED");
-  const pendingReview = drafts.filter((v) => v.lines.some((l) => l.ledgerId === null) || (v.avgConfidence ?? 1) < 0.7);
-  const gstInput = vouchers
-    .filter((v) => v.voucherType === "PURCHASE")
-    .reduce((s, v) => s + (v.invoice?.taxAmount || 0), 0);
-  const gstOutput = vouchers
-    .filter((v) => v.voucherType === "SALE")
-    .reduce((s, v) => s + (v.invoice?.taxAmount || 0), 0);
+  const countFor = (...statuses: string[]) =>
+    statusCounts
+      .filter((s) => statuses.includes(s.status))
+      .reduce((sum, s) => sum + s._count, 0);
+
+  const draftCount = countFor("DRAFT");
+  const approvedCount = countFor("APPROVED");
+  const exportedCount = countFor("EXPORTED_DEMO", "POSTED");
+  const gstInput = gstInputAgg._sum.taxAmount ?? 0;
+  const gstOutput = gstOutputAgg._sum.taxAmount ?? 0;
   const itcAtStake = latestRecon?.itcAtRisk ?? 0;
   const gstLiability = Math.max(0, gstOutput - gstInput);
 
-  const reviewList = drafts.slice(0, 20).map((v) => ({
+  const reviewList = draftPreview.map((v) => ({
     id: v.id,
     vendor: v.invoice?.vendor ?? "Unknown",
     invoiceNumber: v.invoice?.invoiceNumber ?? "—",
@@ -80,7 +113,7 @@ export default async function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {client.name} · Welcome back, {clerk.firstName || "User"}
+            {client.name} · Welcome back, {user.name || "User"}
           </p>
         </div>
         <div className="flex gap-3">
@@ -102,7 +135,7 @@ export default async function Dashboard() {
         <StatCard
           icon={<ClipboardList className="h-5 w-5 text-yellow-600" />}
           label="Pending Review"
-          value={pendingReview.length.toString()}
+          value={pendingReviewCount.toString()}
           bg="bg-yellow-50"
           href={showExtraPages ? "/review" : "/transactions"}
         />
@@ -132,26 +165,26 @@ export default async function Dashboard() {
         <StatCard
           icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
           label="Draft Vouchers"
-          value={drafts.length.toString()}
+          value={draftCount.toString()}
           bg="bg-amber-50"
         />
         <StatCard
           icon={<Send className="h-5 w-5 text-emerald-600" />}
           label="Ready to Export"
-          value={approved.length.toString()}
+          value={approvedCount.toString()}
           bg="bg-emerald-50"
           valueColor="text-emerald-600"
         />
         <StatCard
           icon={<Download className="h-5 w-5 text-sky-600" />}
           label="Exported"
-          value={exported.length.toString()}
+          value={exportedCount.toString()}
           bg="bg-sky-50"
         />
         <StatCard
           icon={<ClipboardList className="h-5 w-5 text-blue-600" />}
           label="Invoices"
-          value={invoices.length.toString()}
+          value={invoiceCount.toString()}
           bg="bg-blue-50"
         />
       </div>

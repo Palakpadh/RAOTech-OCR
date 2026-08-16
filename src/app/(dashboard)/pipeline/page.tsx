@@ -24,7 +24,14 @@ export default async function PipelinePage() {
     }),
     prisma.voucher.findMany({
       where: { userId: user.id, clientId: client.id },
-      include: { invoice: { select: { vendor: true, invoiceNumber: true } }, lines: { select: { ledgerId: true } } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        totalDebit: true,
+        invoice: { select: { vendor: true, invoiceNumber: true } },
+        lines: { select: { ledgerId: true } },
+      },
     }),
   ]);
 

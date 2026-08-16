@@ -7,11 +7,32 @@ export default async function ReportsPage() {
   if (!ctx) return redirect("/sign-in");
   const { user, client } = ctx;
 
+  // Narrowed from `include: { invoice: true, lines: { include: { ledger: true } } }`,
+  // which pulled every column of every invoice plus a full Ledger row per
+  // voucher line — for a page that reads about a dozen fields.
   const vouchers = await prisma.voucher.findMany({
     where: { userId: user.id, clientId: client.id },
-    include: {
-      invoice: true,
-      lines: { include: { ledger: true } },
+    select: {
+      date: true,
+      voucherType: true,
+      totalDebit: true,
+      totalCredit: true,
+      invoice: {
+        select: {
+          vendor: true,
+          vendorGstin: true,
+          customerName: true,
+          customerGstin: true,
+          invoiceNumber: true,
+          subtotal: true,
+          cgst: true,
+          sgst: true,
+          igst: true,
+          taxAmount: true,
+          totalAmount: true,
+        },
+      },
+      lines: { select: { role: true, credit: true, ledgerNameSnapshot: true } },
     },
   });
 

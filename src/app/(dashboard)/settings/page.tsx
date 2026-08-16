@@ -9,14 +9,17 @@ export default async function SettingsPage() {
   if (!ctx) return redirect("/sign-in");
   const { user, client } = ctx;
 
-  await seedLedgersForUser(prisma, user.id, client.id);
+  const ledgerSelect = {
+    where: { userId: user.id, clientId: client.id },
+    orderBy: [{ group: "asc" as const }, { name: "asc" as const }],
+    select: { id: true, name: true, group: true, ledgerType: true, isSystem: true },
+  };
 
-  const [ledgers, rules, mappingStats] = await Promise.all([
-    prisma.ledger.findMany({
-      where: { userId: user.id, clientId: client.id },
-      orderBy: [{ group: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, group: true, ledgerType: true, isSystem: true },
-    }),
+  // Previously this page seeded on every load, costing a COUNT round trip even
+  // when the chart of accounts was already there. The ledger list we need
+  // anyway tells us whether seeding is required.
+  const [seededLedgers, rules, mappingStats] = await Promise.all([
+    prisma.ledger.findMany(ledgerSelect),
     prisma.mappingRule.findMany({
       where: { userId: user.id, clientId: client.id },
       orderBy: { priority: "asc" },
@@ -28,6 +31,12 @@ export default async function SettingsPage() {
       _count: true,
     }),
   ]);
+
+  let ledgers = seededLedgers;
+  if (ledgers.length === 0) {
+    await seedLedgersForUser(prisma, user.id, client.id);
+    ledgers = await prisma.ledger.findMany(ledgerSelect);
+  }
 
   const totalMapped = mappingStats.reduce((s, m) => s + m._count, 0);
   const autoMapped = mappingStats

@@ -4,21 +4,27 @@ import { getDbUser } from "@/lib/getDbUser";
 import {
   ACTIVE_CLIENT_COOKIE,
   ensureDefaultClient,
-  listClientsForUser,
   getActiveClient,
 } from "@/lib/clientContext";
 import { seedLedgersForUser } from "@/lib/accounting/seedLedgers";
 
+// ClientSwitcher calls this on every page load. It used to run the full
+// user + workspace bootstrap three times over (getDbUser, listClientsForUser,
+// then getActiveClient, which repeats both). getActiveClient already guarantees
+// a workspace exists, so one call plus the list is enough.
 export async function GET() {
   try {
-    const user = await getDbUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const clients = await listClientsForUser(user.id);
     const ctx = await getActiveClient();
+    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const clients = await prisma.client.findMany({
+      where: { userId: ctx.user.id },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    });
+
     return NextResponse.json({
       clients,
-      activeClientId: ctx?.client.id ?? null,
+      activeClientId: ctx.client.id,
     });
   } catch (error) {
     console.error("[CLIENTS_GET]", error);

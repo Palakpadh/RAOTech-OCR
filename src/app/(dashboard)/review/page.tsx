@@ -11,7 +11,12 @@ export default async function ReviewPage() {
   const drafts = await prisma.voucher.findMany({
     where: { userId: user.id, clientId: client.id, status: "DRAFT" },
     orderBy: [{ avgConfidence: "asc" }, { createdAt: "desc" }],
-    include: {
+    select: {
+      id: true,
+      voucherType: true,
+      totalDebit: true,
+      totalCredit: true,
+      avgConfidence: true,
       invoice: {
         select: {
           vendor: true,
