@@ -56,7 +56,6 @@ export default function LandingPage() {
                 className="block aspect-video w-full object-cover"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
                 autoPlay
-                muted
                 loop
                 playsInline
                 controls={false}
