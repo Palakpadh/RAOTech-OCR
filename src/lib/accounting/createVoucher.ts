@@ -112,7 +112,7 @@ export async function createDraftVoucherForInvoice(
       },
       include: { lines: { orderBy: { sortOrder: "asc" } } },
     });
-  });
+  }, { maxWait: 30000, timeout: 30000 });
 
   return result;
 }
