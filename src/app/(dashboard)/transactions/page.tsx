@@ -10,44 +10,47 @@ export default async function TransactionsPage() {
 
   const scope = { userId: user.id, clientId: client.id };
 
-  // Sequential queries to avoid exhausting Neon's connection pool
-  const vouchers = await prisma.voucher.findMany({
-    where: scope,
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      voucherType: true,
-      totalDebit: true,
-      status: true,
-      avgConfidence: true,
-      invoice: { select: { vendor: true, invoiceNumber: true, isDuplicate: true } },
-      lines: { select: { ledgerId: true } },
-    },
-  });
-  const statements = await prisma.bankStatement.findMany({
-    where: scope,
-    orderBy: { createdAt: "desc" },
-    select: { id: true, fileName: true, bankName: true, status: true },
-  });
+  const [vouchers, statements] = await Promise.all([
+    prisma.voucher.findMany({
+      where: scope,
+      orderBy: { createdAt: "desc" },
+      // select, not include: include ships every scalar column on Voucher when
+      // the table below only renders six of them.
+      select: {
+        id: true,
+        voucherType: true,
+        totalDebit: true,
+        status: true,
+        avgConfidence: true,
+        invoice: { select: { vendor: true, invoiceNumber: true, isDuplicate: true } },
+        lines: { select: { ledgerId: true } },
+      },
+    }),
+    prisma.bankStatement.findMany({
+      where: scope,
+      orderBy: { createdAt: "desc" },
+      select: { id: true, fileName: true, bankName: true, status: true },
+    }),
+  ]);
 
   // Roll the per-statement totals up in Postgres instead of streaming every
   // BankTxn row over the wire just to count and sum them.
   const statementIds = statements.map((s) => s.id);
-  let txnTotals: any[] = [];
-  let txnUnmapped: any[] = [];
-  if (statementIds.length) {
-    txnTotals = await prisma.bankTxn.groupBy({
-      by: ["statementId"],
-      where: { statementId: { in: statementIds } },
-      _count: { _all: true },
-      _sum: { deposit: true, withdrawal: true },
-    });
-    txnUnmapped = await prisma.bankTxn.groupBy({
-      by: ["statementId"],
-      where: { statementId: { in: statementIds }, ledgerId: null },
-      _count: { _all: true },
-    });
-  }
+  const [txnTotals, txnUnmapped] = statementIds.length
+    ? await Promise.all([
+        prisma.bankTxn.groupBy({
+          by: ["statementId"],
+          where: { statementId: { in: statementIds } },
+          _count: { _all: true },
+          _sum: { deposit: true, withdrawal: true },
+        }),
+        prisma.bankTxn.groupBy({
+          by: ["statementId"],
+          where: { statementId: { in: statementIds }, ledgerId: null },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []];
 
   const totalsById = new Map(txnTotals.map((t) => [t.statementId, t]));
   const unmappedById = new Map(txnUnmapped.map((t) => [t.statementId, t._count._all]));

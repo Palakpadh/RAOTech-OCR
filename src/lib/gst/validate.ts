@@ -235,19 +235,7 @@ export function validateInvoiceGstExtended(inv: {
     if (!inv.date) {
       issues.push({ code: "INVOICE_DATE_MISSING", severity: "warning", message: "Invoice date missing" });
     } else {
-      let d: Date;
-      if (inv.date instanceof Date) {
-        d = inv.date;
-      } else {
-        const str = String(inv.date).trim();
-        // Handle Indian DD/MM/YYYY and DD-MM-YYYY formats that JS Date() can't parse
-        const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if (ddmmyyyy) {
-          d = new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, "0")}-${ddmmyyyy[1].padStart(2, "0")}`);
-        } else {
-          d = new Date(str);
-        }
-      }
+      const d = inv.date instanceof Date ? inv.date : new Date(inv.date);
       if (isNaN(d.getTime())) {
         issues.push({ code: "INVOICE_DATE_INVALID", severity: "error", message: "Invoice date is invalid" });
       } else if (d.getTime() > Date.now() + 86400000) {
@@ -284,14 +272,10 @@ export function validateInvoiceGstExtended(inv: {
   });
 
   check(() => {
-    const GST_SLABS = new Set([0, 0.25, 3, 5, 12, 18, 28]);
     for (const [i, it] of items.entries()) {
       const qty = Number(it.qty ?? 0);
       const rate = Number(it.rate ?? 0);
       const price = Number(it.price ?? 0);
-      // Skip check when 'rate' looks like a GST slab percentage (OCR often
-      // puts gst_rate into the rate field).
-      if (rate > 0 && GST_SLABS.has(rate) && rate < price) continue;
       if (qty > 0 && rate > 0 && price > 0 && Math.abs(qty * rate - price) > Math.max(2, price * 0.02)) {
         issues.push({
           code: "LINE_MATH",

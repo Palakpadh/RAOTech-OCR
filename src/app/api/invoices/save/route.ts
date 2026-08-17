@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { getActiveClient } from "@/lib/clientContext";
 import { createDraftVoucherForInvoice } from "@/lib/accounting/createVoucher";
@@ -7,9 +8,27 @@ import { detectDuplicateKey, validateInvoiceGstExtended } from "@/lib/gst/valida
 
 export async function POST(req: Request) {
   try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    const dbUser = await prisma.user.upsert({
+      where: { email: email },
+      update: {},
+      create: {
+        id: user.id,
+        clerkId: user.id,
+        email: email,
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        plan: "FREE",
+      },
+    });
+
     const ctx = await getActiveClient();
-    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { user: dbUser, client } = ctx;
+    if (!ctx) return NextResponse.json({ error: "No active client" }, { status: 400 });
+    const { client } = ctx;
 
     const body = await req.json();
     const {
@@ -28,8 +47,6 @@ export async function POST(req: Request) {
     const validation = validateInvoiceGstExtended({
       vendorGstin: extractedData?.vendor_gstin,
       customerGstin: extractedData?.customer_gstin,
-      invoiceNumber: extractedData?.invoice_number,
-      date: extractedData?.date,
       subtotal: cleanMoney(extractedData?.subtotal),
       cgst: cleanMoney(extractedData?.cgst),
       sgst: cleanMoney(extractedData?.sgst),
@@ -149,8 +166,8 @@ export async function POST(req: Request) {
       duplicateOfId,
       validation,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[INVOICE_SAVE_ERROR]", error);
-    return NextResponse.json({ error: "Failed to save invoice", detail: error?.message || String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to save invoice" }, { status: 500 });
   }
 }
