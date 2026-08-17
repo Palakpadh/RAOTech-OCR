@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button"; // Run: npx shadcn@latest add button
-import { ArrowRight, BarChart3, FileText, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, FileText, Zap, Volume2, VolumeX } from "lucide-react";
 
 export default function LandingPage() {
   const [currentDateTime, setCurrentDateTime] = useState("");
@@ -27,6 +27,39 @@ export default function LandingPage() {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
+
+  useEffect(() => {
+    // Ensure autoplay works by starting muted. Attempt to play; browsers
+    // may still block autoplay with sound, so leave unmute to user action.
+    if (videoRef.current) {
+      try {
+        videoRef.current.muted = isMuted;
+        if (!isMuted) videoRef.current.volume = 0.8;
+        const p = videoRef.current.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [isMuted]);
+
+  const toggleMute = () => {
+    if (!videoRef.current) return;
+    const newMuted = !videoRef.current.muted;
+    videoRef.current.muted = newMuted;
+    if (!newMuted) videoRef.current.volume = 0.8;
+    // attempt to play with user gesture; this should enable audio in most browsers
+    try {
+      const p = videoRef.current.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+    setIsMuted(newMuted);
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -53,13 +86,22 @@ export default function LandingPage() {
           <div className="mx-auto text-center">
             <div className="relative w-full overflow-hidden bg-black shadow-none">
               <video
+                ref={videoRef}
                 className="block aspect-video w-full object-cover"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
                 autoPlay
+                muted={isMuted}
                 loop
                 playsInline
                 controls={false}
               />
+              <button
+                onClick={toggleMute}
+                aria-label={isMuted ? "Unmute video" : "Mute video"}
+                className="absolute right-4 bottom-4 z-20 flex items-center justify-center rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+              >
+                {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </button>
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black via-black/95 to-transparent" />
             </div>
           </div>
