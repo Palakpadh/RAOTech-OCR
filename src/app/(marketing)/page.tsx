@@ -166,7 +166,7 @@ export default function LandingPage() {
                         {eyebrow}
                       </p>
                       <h2 className="text-3xl font-extrabold uppercase leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
-                        {title}
+                                    {title}
                       </h2>
                       <p className="mt-4 max-w-md text-sm text-white/70 md:text-lg">{description}</p>
                     </div>
