@@ -7,6 +7,11 @@ import { ArrowRight, BarChart3, FileText, Zap, Volume2, VolumeX } from "lucide-r
 
 export default function LandingPage() {
   const [currentDateTime, setCurrentDateTime] = useState("");
+  const heroDate = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -103,15 +108,26 @@ export default function LandingPage() {
                 {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </button>
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black via-black/95 to-transparent" />
+
+              {/* Date + Tagline, bottom-left, SpaceX style */}
+              <div className="absolute bottom-2 left-4 md:left-10 z-10 max-w-2xl text-left text-white">
+                <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-white/80 md:text-sm">
+                  {heroDate}
+                </p>
+                <h1 className="text-2xl font-extrabold uppercase leading-[1.05] tracking-tight md:text-4xl lg:text-5xl">
+                  Your Work, Our Trusted Care.
+                </h1>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Features Grid */}
-        <section className="w-full pt-2 pb-0 md:pt-4 lg:pt-6">
-          <div className="mx-auto flex w-full flex-col gap-0">
+        <section className="w-full border-t border-white/10">
+          <div className="mx-auto flex w-full flex-col">
             {[
               {
+                eyebrow: "Document Intelligence",
                 title: "Smart OCR",
                 description: "Auto-extract details from PDF, PNG, or Zip files instantly.",
                 icon: FileText,
@@ -119,6 +135,7 @@ export default function LandingPage() {
                 image: "/static/ocr-image.jpg",
               },
               {
+                eyebrow: "Conversational AI",
                 title: "AI Chatbot",
                 description: 'Ask questions like "What was my total sales last October?"',
                 icon: Zap,
@@ -126,27 +143,33 @@ export default function LandingPage() {
                 image: "/static/chatbot-image.jpg",
               },
               {
+                eyebrow: "Reporting",
                 title: "Analytics",
                 description: "Visual dashboards for Monthly and Yearly sales trends.",
                 icon: BarChart3,
                 align: "right",
                 image: "/static/analytics-image.jpg",
               },
-            ].map(({ title, description, icon: Icon, align, image }) => (
-              <div key={title} className="w-full">
+            ].map(({ eyebrow, title, description, icon: Icon, align, image }, i) => (
+              <div key={title} className={i !== 0 ? "w-full border-t border-white/10" : "w-full"}>
                 <div
-                  className="relative flex aspect-[16/9] w-full items-center overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8 md:px-8 md:py-10 lg:px-12 lg:py-12"
+                  className="relative flex aspect-[16/9] w-full items-center overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8 md:px-8 md:py-10 lg:px-16 lg:py-12"
                   style={{
-                    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.52), rgba(0,0,0,0.32)), url('${image}')`,
+                    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.6), rgba(0,0,0,0.35)), url('${image}')`,
                   }}
                 >
                   <div className={`w-full ${align === "right" ? "flex justify-end" : "flex justify-start"}`}>
                     <div className="max-w-lg text-left text-white">
-                      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
-                        <Icon className="h-7 w-7 text-white" />
+                      <div className="mb-6 flex h-12 w-12 items-center justify-center border border-white/30 bg-white/5">
+                        <Icon className="h-5 w-5 text-white" />
                       </div>
-                      <h2 className="text-4xl font-bold md:text-5xl lg:text-6xl">{title}</h2>
-                      <p className="mt-4 max-w-md text-base text-white/80 md:text-xl">{description}</p>
+                      <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-white/60">
+                        {eyebrow}
+                      </p>
+                      <h2 className="text-3xl font-extrabold uppercase leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
+                        {title}
+                      </h2>
+                      <p className="mt-4 max-w-md text-sm text-white/70 md:text-lg">{description}</p>
                     </div>
                   </div>
                 </div>
