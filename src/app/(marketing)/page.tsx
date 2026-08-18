@@ -75,7 +75,6 @@ export default function LandingPage() {
             <Link className="flex items-center justify-center font-bold text-2xl text-white" href="#">
               RAO AI
             </Link>
-            <span className="mt-1 text-xs font-medium tracking-wide text-white/70">{currentDateTime || "--"}</span>
           </div>
           <nav className="ml-auto flex gap-4 sm:gap-6">
             <Link href="/dashboard">
