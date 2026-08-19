@@ -109,7 +109,7 @@ export default function LandingPage() {
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black via-black/95 to-transparent" />
 
               {/* Date + Tagline, bottom-left, SpaceX style */}
-              <div className="absolute bottom-2 left-4 md:left-10 z-10 max-w-2xl text-left text-white">
+              <div className="absolute bottom-8 left-4 z-10 max-w-[85%] text-left text-white md:bottom-2 md:left-10 md:max-w-2xl">
                 <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-white/80 md:text-sm">
                   {heroDate}
                 </p>
