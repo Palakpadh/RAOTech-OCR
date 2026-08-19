@@ -79,35 +79,70 @@ export function ClientSwitcher() {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+        className="inline-flex items-center gap-2 hover:bg-[#1c1f28] transition"
+        style={{
+          border: "1px solid #2a2d35",
+          background: "#161920",
+          padding: "7px 14px",
+          fontSize: "13px",
+          fontWeight: 500,
+          color: "#e8e8ed",
+        }}
       >
-        <Building2 className="h-4 w-4 text-emerald-600" />
-        <span className="max-w-[180px] truncate">{active?.name || "Select client"}</span>
-        <ChevronDown className="h-4 w-4 text-gray-400" />
+        <Building2 style={{ width: "15px", height: "15px", color: "#6b6f78" }} strokeWidth={1.5} />
+        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {active?.name || "Select client"}
+        </span>
+        <ChevronDown style={{ width: "14px", height: "14px", color: "#6b6f78" }} />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border bg-white shadow-xl">
-          <div className="border-b px-3 py-2 text-xs font-semibold uppercase text-gray-400">
-            Clients
+        <div
+          className="absolute right-0 z-50 mt-1 shadow-2xl"
+          style={{ width: "280px", border: "1px solid #2a2d35", background: "#0f1115" }}
+        >
+          <div style={{ borderBottom: "1px solid #2a2d35", padding: "10px 14px" }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 500,
+                textTransform: "uppercase" as const,
+                letterSpacing: "1.5px",
+                color: "#6b6f78",
+              }}
+            >
+              Clients
+            </span>
           </div>
-          <div className="max-h-64 overflow-y-auto py-1">
+          <div style={{ maxHeight: "256px", overflowY: "auto", padding: "4px 0" }}>
             {clients.map((c) => (
               <button
                 key={c.id}
                 disabled={saving}
                 onClick={() => switchClient(c.id)}
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50"
+                className="flex w-full items-center justify-between hover:bg-white/[0.03] transition"
+                style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px" }}
               >
                 <div>
-                  <div className="font-medium">{c.name}</div>
-                  {c.gstin && <div className="text-xs text-gray-400">{c.gstin}</div>}
+                  <div style={{ fontWeight: 500, color: "#e8e8ed" }}>{c.name}</div>
+                  {c.gstin && (
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "#6b6f78",
+                        fontFamily: "'Geist Mono', 'Courier New', monospace",
+                        marginTop: "2px",
+                      }}
+                    >
+                      {c.gstin}
+                    </div>
+                  )}
                 </div>
-                {c.id === activeId && <Check className="h-4 w-4 text-emerald-600" />}
+                {c.id === activeId && <Check style={{ width: "16px", height: "16px", color: "#4ade80" }} />}
               </button>
             ))}
           </div>
-          <div className="border-t p-2">
+          <div style={{ borderTop: "1px solid #2a2d35", padding: "8px" }}>
             {creating ? (
               <div className="flex gap-2">
                 <Input
@@ -115,9 +150,15 @@ export function ClientSwitcher() {
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Client name"
                   className="h-8"
+                  style={{ background: "#161920", borderColor: "#2a2d35", color: "#e8e8ed", borderRadius: "0" }}
                   autoFocus
                 />
-                <Button size="sm" onClick={createClient} disabled={saving}>
+                <Button
+                  size="sm"
+                  onClick={createClient}
+                  disabled={saving}
+                  style={{ background: "#fff", color: "#0b0d10", borderRadius: "0", fontWeight: 700 }}
+                >
                   Add
                 </Button>
               </div>
@@ -126,6 +167,7 @@ export function ClientSwitcher() {
                 variant="outline"
                 size="sm"
                 className="w-full"
+                style={{ borderColor: "#2a2d35", color: "#a0a0a8", borderRadius: "0" }}
                 onClick={() => setCreating(true)}
               >
                 <Plus className="mr-1 h-3.5 w-3.5" /> New client

@@ -44,40 +44,105 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const visibleRoutes = routes.filter((route) => showExtraPages || !route.localOnly);
 
   return (
-    <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
-      <div className="px-3 py-2 flex-1">
-        <Link href="/dashboard" className="flex items-center pl-3 mb-10">
-          <h1 className="text-2xl font-bold">RAO AI</h1>
+    <div className="flex flex-col h-full bg-[#0b0d10] text-white">
+      {/* ── Brand ── */}
+      <div className="px-5 pt-5 pb-0">
+        <Link href="/dashboard" className="block">
+          <h1
+            className="font-bold uppercase"
+            style={{
+              fontSize: "22px",
+              letterSpacing: "3px",
+              lineHeight: "1.1",
+              fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+            }}
+          >
+            RAO TECH
+          </h1>
         </Link>
-        <div className="space-y-1">
-          {visibleRoutes.map((route) => (
+      </div>
+      <div className="px-5 pt-1 pb-4 border-b border-[#2a2d35]">
+        <p
+          className="text-[#6b6f78] uppercase"
+          style={{
+            fontSize: "10px",
+            letterSpacing: "2.4px",
+            fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+          }}
+        >
+          Operational Center
+        </p>
+      </div>
+
+      {/* ── Navigation ── */}
+      <nav className="flex-1 px-2 pt-3 pb-2 space-y-[2px] overflow-y-auto">
+        {visibleRoutes.map((route) => {
+          const isActive =
+            pathname === route.href || pathname.startsWith(route.href + "/");
+          return (
             <Link
               key={route.href}
               href={route.href}
               onClick={onNavigate}
               className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href || pathname.startsWith(route.href + "/")
-                  ? "text-white bg-white/10"
-                  : "text-zinc-400"
+                "group flex items-center gap-3 w-full cursor-pointer transition-all duration-150",
+                isActive
+                  ? "text-white bg-white/[0.08]"
+                  : "text-[#6b6f78] hover:text-white hover:bg-white/[0.03]"
               )}
+              style={{
+                padding: "10px 16px",
+                borderLeft: isActive ? "3px solid #ffffff" : "3px solid transparent",
+              }}
             >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+              <route.icon
+                className={cn("flex-shrink-0", isActive ? "text-white" : "text-[#6b6f78]")}
+                style={{ width: "18px", height: "18px" }}
+                strokeWidth={1.5}
+              />
+              <span
+                className="uppercase"
+                style={{
+                  fontSize: "12px",
+                  letterSpacing: "1.5px",
+                  fontWeight: 500,
+                  fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+                }}
+              >
                 {route.label}
-              </div>
+              </span>
             </Link>
-          ))}
-        </div>
-      </div>
-      <div className="px-3 py-2">
+          );
+        })}
+      </nav>
+
+      {/* ── Bottom: Settings + Logout ── */}
+      <div className="border-t border-[#2a2d35]">
         <SignOutButton>
           <div
-            className="flex items-center p-3 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer transition"
+            className="flex items-center gap-3 text-[#6b6f78] hover:text-white hover:bg-white/[0.03] cursor-pointer transition-all duration-150"
+            style={{
+              padding: "12px 16px",
+              borderLeft: "3px solid transparent",
+            }}
             onClick={onNavigate}
           >
-            <LogOut className="h-5 w-5 mr-3 text-red-500" />
-            Logout
+            <LogOut
+              className="flex-shrink-0"
+              style={{ width: "18px", height: "18px" }}
+              strokeWidth={1.5}
+            />
+            <span
+              className="uppercase"
+              style={{
+                fontSize: "12px",
+                letterSpacing: "1.5px",
+                fontWeight: 500,
+                fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+              }}
+            >
+              Logout
+            </span>
           </div>
         </SignOutButton>
       </div>
