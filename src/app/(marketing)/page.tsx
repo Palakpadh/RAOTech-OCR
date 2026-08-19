@@ -88,10 +88,10 @@ export default function LandingPage() {
       <main className="flex-1 bg-black">
         <section className="w-full pt-0 pb-0 bg-black">
           <div className="mx-auto text-center">
-            <div className="relative w-full overflow-hidden bg-black shadow-none h-screen md:h-auto">
+            <div className="relative h-[100svh] w-full overflow-hidden bg-black shadow-none md:h-auto">
               <video
                 ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover md:relative md:inset-auto md:block md:aspect-video md:h-auto"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
                 autoPlay
                 muted={isMuted}
@@ -152,23 +152,23 @@ export default function LandingPage() {
             ].map(({ eyebrow, title, description, icon: Icon, align, image }, i) => (
               <div key={title} className={i !== 0 ? "w-full border-t border-white/10" : "w-full"}>
                 <div
-                  className="relative flex aspect-[16/9] w-full items-center overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-8 md:px-8 md:py-10 lg:px-16 lg:py-12"
+                  className="relative flex aspect-[4/5] w-full items-center overflow-hidden bg-cover bg-center bg-no-repeat px-4 py-6 md:aspect-[16/9] md:px-8 md:py-10 lg:px-16 lg:py-12"
                   style={{
                     backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.6), rgba(0,0,0,0.35)), url('${image}')`,
                   }}
                 >
                   <div className={`w-full ${align === "right" ? "flex justify-end" : "flex justify-start"}`}>
-                    <div className="max-w-lg text-left text-white">
-                      <div className="mb-4 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center border border-white/30 bg-white/5">
-                        <Icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
+                    <div className={`max-w-[78%] text-white ${align === "right" ? "text-right md:text-left" : "text-left"} md:max-w-lg`}>
+                      <div className="mb-4 ml-auto flex h-10 w-10 items-center justify-center border border-white/30 bg-white/5 md:mb-6 md:ml-0 md:h-12 md:w-12">
+                        <Icon className="h-4 w-4 text-white md:h-5 md:w-5" />
                       </div>
                       <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-white/60">
                         {eyebrow}
                       </p>
-                      <h2 className="text-2xl font-semibold uppercase leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
+                      <h2 className="text-2xl font-semibold uppercase leading-[1.05] tracking-tight md:text-5xl md:font-extrabold lg:text-6xl">
                         {title}
                       </h2>
-                      <p className="mt-3 max-w-md text-sm md:text-lg text-white/70">{description}</p>
+                      <p className="mt-3 max-w-md text-sm text-white/70 md:mt-4 md:text-lg">{description}</p>
                     </div>
                   </div>
                 </div>
