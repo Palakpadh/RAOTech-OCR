@@ -91,7 +91,7 @@ export default function LandingPage() {
             <div className="relative h-[100svh] w-full overflow-hidden bg-black shadow-none md:h-auto">
               <video
                 ref={videoRef}
-                className="absolute inset-0 h-full w-full object-cover md:relative md:inset-auto md:block md:aspect-video md:h-auto"
+                className="absolute inset-0 h-full w-full object-contain md:relative md:inset-auto md:block md:aspect-video md:h-auto md:object-cover"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
                 autoPlay
                 muted={isMuted}
