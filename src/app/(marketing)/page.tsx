@@ -88,10 +88,10 @@ export default function LandingPage() {
       <main className="flex-1 bg-black">
         <section className="w-full pt-0 pb-0 bg-black">
           <div className="mx-auto text-center">
-            <div className="relative w-full overflow-hidden bg-black shadow-none">
+            <div className="relative w-full overflow-hidden bg-black shadow-none h-screen md:h-auto">
               <video
                 ref={videoRef}
-                className="block aspect-video w-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
                 src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
                 autoPlay
                 muted={isMuted}
@@ -159,16 +159,16 @@ export default function LandingPage() {
                 >
                   <div className={`w-full ${align === "right" ? "flex justify-end" : "flex justify-start"}`}>
                     <div className="max-w-lg text-left text-white">
-                      <div className="mb-6 flex h-12 w-12 items-center justify-center border border-white/30 bg-white/5">
-                        <Icon className="h-5 w-5 text-white" />
+                      <div className="mb-4 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center border border-white/30 bg-white/5">
+                        <Icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                       </div>
                       <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-white/60">
                         {eyebrow}
                       </p>
-                      <h2 className="text-3xl font-extrabold uppercase leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
-                                    {title}
+                      <h2 className="text-2xl font-semibold uppercase leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
+                        {title}
                       </h2>
-                      <p className="mt-4 max-w-md text-sm text-white/70 md:text-lg">{description}</p>
+                      <p className="mt-3 max-w-md text-sm md:text-lg text-white/70">{description}</p>
                     </div>
                   </div>
                 </div>
