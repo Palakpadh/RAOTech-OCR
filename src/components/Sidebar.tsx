@@ -75,7 +75,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </div>
 
       {/* ── Navigation ── */}
-      <nav className="flex-1 px-2 pt-3 pb-2 space-y-[2px] overflow-y-auto">
+      <nav
+        className="flex-1 min-h-0 px-2 pt-3 pb-2 space-y-[2px] overflow-y-auto overscroll-contain"
+        style={{ minHeight: 0, overflowY: "auto" }}
+      >
         {visibleRoutes.map((route) => {
           const isActive =
             pathname === route.href || pathname.startsWith(route.href + "/");

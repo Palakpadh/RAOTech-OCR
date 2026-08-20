@@ -21,9 +21,7 @@ export default async function Dashboard() {
   const { user, client } = ctx;
   const showExtraPages = extraPagesEnabled();
 
-  // Every headline number plus the draft preview in a single round trip.
-  // Measured against the batch of eight Prisma calls this replaced:
-  // 1345ms -> 162ms.
+
   const { stats, rows } = await getDashboardData(user.id, client.id);
 
   const {
@@ -61,27 +59,34 @@ export default async function Dashboard() {
   return (
     <div className="p-4 md:p-6 lg:p-7" style={{ maxWidth: "1400px" }}>
       {/* ── Header Row ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <div>
+      <div
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        style={{ marginBottom: "24px" }}
+      >
+        <div className="min-w-0">
           <h1
             className="text-white font-bold"
             style={{
-              fontSize: "28px",
+              fontSize: "clamp(22px, 5vw, 28px)",
               letterSpacing: "0.5px",
               fontFamily: "'Inter', system-ui, sans-serif",
             }}
           >
             Dashboard
           </h1>
-          <p style={{ fontSize: "13px", color: "#6b6f78", marginTop: "4px", letterSpacing: "0.3px" }}>
+          <p
+            className="truncate"
+            style={{ fontSize: "13px", color: "#6b6f78", marginTop: "4px", letterSpacing: "0.3px" }}
+          >
             {client.name} · Welcome back, {user.name || "User"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <a href="/api/export?format=csv">
+        <div className="flex flex-wrap gap-2.5 sm:shrink-0">
+          <a href="/api/export?format=csv" className="flex-1 sm:flex-none">
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               style={{
                 borderColor: "#2a2d35",
                 background: "transparent",
@@ -96,8 +101,9 @@ export default async function Dashboard() {
               Export CSV
             </Button>
           </a>
-          <Link href="/upload">
+          <Link href="/upload" className="flex-1 sm:flex-none">
             <Button
+              className="w-full sm:w-auto"
               style={{
                 background: "#ffffff",
                 color: "#0b0d10",
@@ -467,15 +473,16 @@ function StatCard({
 }) {
   const card = (
     <div
-      className="hover:bg-[#161920] transition"
+      className="hover:bg-[#161920] transition min-w-0"
       style={{
-        padding: "20px 24px",
+        padding: "16px 18px",
         background: alert ? "rgba(229, 62, 62, 0.04)" : "#0f1115",
         borderRight: alert ? "2px solid rgba(229, 62, 62, 0.5)" : undefined,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", gap: "8px" }}>
         <span
+          className="truncate"
           style={{
             fontSize: "11px",
             fontWeight: 500,
@@ -487,11 +494,12 @@ function StatCard({
         >
           {label}
         </span>
-        <span style={{ color: "#3a3d45" }}>{icon}</span>
+        <span className="shrink-0" style={{ color: "#3a3d45" }}>{icon}</span>
       </div>
       <p
+        className="truncate"
         style={{
-          fontSize: "42px",
+          fontSize: "clamp(20px, 4.5vw, 42px)",
           fontWeight: 700,
           color: valueColor,
           lineHeight: 1,

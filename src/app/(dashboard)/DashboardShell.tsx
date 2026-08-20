@@ -16,6 +16,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  // Lock the background page from scrolling while the mobile menu is open,
+  // so scrolling inside the drawer (e.g. to reach Logout) never scrolls
+  // the page behind it. Restored automatically on close/unmount.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <div className="h-full relative" style={{ background: "#0b0d10" }}>
       {/* Desktop Sidebar */}
@@ -32,15 +44,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             aria-label="Close navigation menu"
-            className="absolute inset-0"
+            className="absolute inset-0 overscroll-none"
             style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
             onClick={() => setMobileMenuOpen(false)}
           />
           <div
-            className="absolute left-0 top-0 h-full shadow-2xl"
+            className="absolute left-0 top-0 h-full shadow-2xl flex flex-col"
             style={{ width: "232px", maxWidth: "85vw", background: "#0b0d10", borderRight: "1px solid #2a2d35" }}
           >
             <div
+              className="shrink-0"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -71,7 +84,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
+            <div className="flex-1 min-h-0">
+              <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
+            </div>
           </div>
         </div>
       )}
