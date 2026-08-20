@@ -149,14 +149,16 @@ export const getActiveClient = cache(async () => {
     }
 
     if (!client && user.activeClientId && user.activeClientId !== cookieClientId) {
+      const activeClientId = user.activeClientId;
+
       client = await traceAsync(
         "clientContext",
         "active-client-find",
         () =>
           prisma.client.findFirst({
-            where: { id: user.activeClientId, userId: user.id },
+            where: { id: activeClientId, userId: user.id },
           }),
-        { userId: user.id, activeClientId: user.activeClientId }
+        { userId: user.id, activeClientId }
       );
     }
 

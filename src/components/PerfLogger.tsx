@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 declare global {
@@ -28,19 +28,28 @@ function patchFetch() {
   window.__raotechFetchPatched = true;
 
   const original = window.fetch.bind(window);
+
   window.fetch = async (...args) => {
     const input = args[0];
-    const requestInfo = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const requestInfo =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
     const start = now();
     log("fetch:start", { request: requestInfo });
 
     try {
       const response = await original(...args);
+
       log("fetch:done", {
         request: requestInfo,
         status: response.status,
         durationMs: Number((now() - start).toFixed(2)),
       });
+
       return response;
     } catch (error) {
       log("fetch:error", {
@@ -48,6 +57,7 @@ function patchFetch() {
         durationMs: Number((now() - start).toFixed(2)),
         error: error instanceof Error ? error.message : String(error),
       });
+
       throw error;
     }
   };
@@ -62,30 +72,52 @@ function installNavigationClickTracker() {
     if (!(anchor instanceof HTMLAnchorElement)) return;
 
     const href = anchor.getAttribute("href");
-    if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
 
-    window.__raotechNavStart = { href, startedAt: now() };
+    if (
+      !href ||
+      href.startsWith("#") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:")
+    ) {
+      return;
+    }
+
+    window.__raotechNavStart = {
+      href,
+      startedAt: now(),
+    };
+
     log("nav:click", { href });
   };
 
   document.addEventListener("click", onClick, true);
-  return () => document.removeEventListener("click", onClick, true);
+
+  return () => {
+    document.removeEventListener("click", onClick, true);
+  };
 }
 
-export function PerfLogger() {
+function PerfLoggerInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const previousRouteRef = useRef<string>("");
 
   useEffect(() => {
     patchFetch();
+
     const removeClickListener = installNavigationClickTracker();
-    log("session:start", { userAgent: navigator.userAgent });
+
+    log("session:start", {
+      userAgent: navigator.userAgent,
+    });
+
     return removeClickListener;
   }, []);
 
   useEffect(() => {
-    const route = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    const query = searchParams.toString();
+    const route = `${pathname}${query ? `?${query}` : ""}`;
+
     const previousRoute = previousRouteRef.current;
 
     if (!previousRoute) {
@@ -95,7 +127,10 @@ export function PerfLogger() {
     }
 
     const navStart = window.__raotechNavStart;
-    const durationMs = navStart ? Number((now() - navStart.startedAt).toFixed(2)) : null;
+
+    const durationMs = navStart
+      ? Number((now() - navStart.startedAt).toFixed(2))
+      : null;
 
     log("route:changed", {
       from: previousRoute,
@@ -109,4 +144,12 @@ export function PerfLogger() {
   }, [pathname, searchParams]);
 
   return null;
+}
+
+export function PerfLogger() {
+  return (
+    <Suspense fallback={null}>
+      <PerfLoggerInner />
+    </Suspense>
+  );
 }
