@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Define the shape of a message
@@ -12,16 +10,28 @@ type Message = {
   content: string;
 };
 
+function formatTime(d: Date) {
+  return d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hello! I am RAO AI. Ask about this client's ITC, drafts, vendors, or reconciliation." }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // Terminal-log timestamps — display only, doesn't touch message data/logic.
+  const [sessionStart] = useState(() => formatTime(new Date()));
+  const [timestamps, setTimestamps] = useState<string[]>([formatTime(new Date())]);
 
   // Auto-scroll to bottom logic
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -39,6 +49,7 @@ export default function ChatPage() {
 
     // 1. Add User Message to UI
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setTimestamps((prev) => [...prev, formatTime(new Date())]);
     setIsLoading(true);
 
     try {
@@ -54,88 +65,197 @@ export default function ChatPage() {
 
       // 3. Add AI Response to UI
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      setTimestamps((prev) => [...prev, formatTime(new Date())]);
     } catch (error) {
       console.error(error);
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I encountered an error." }]);
+      setTimestamps((prev) => [...prev, formatTime(new Date())]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const labelStyle = {
+    fontSize: "11px",
+    letterSpacing: "1.5px",
+    fontWeight: 500,
+    textTransform: "uppercase" as const,
+    fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-50px)]">
-      {/* Header */}
-      <div className="p-6 border-b bg-white shadow-sm">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Bot className="h-8 w-8 text-blue-600" />
-          AI Invoice Assistant
-        </h1>
-        <p className="text-gray-500 text-sm">Powered by Gemini AI - Ask questions about your invoices</p>
+    <div
+      className="flex flex-col h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-50px)]"
+      style={{ background: "#ffffff" }}
+    >
+      {/* Context Header — light, sits inside the chat page below the app's own black navbar */}
+      <div
+        className="flex items-center justify-between shrink-0"
+        style={{ height: "48px", borderBottom: "1px solid #e5e7eb", background: "#ffffff", padding: "0 24px" }}
+      >
+        <div className="flex items-center gap-2">
+          <span style={{ fontSize: "16px" }}>🤖</span>
+          <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827", fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif" }}>
+            AI Assistant
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 relative">
+            <span
+              className="animate-ping absolute inline-flex h-full w-full"
+              style={{ borderRadius: "50%", background: "#22c55e", opacity: 0.4 }}
+            />
+            <span
+              className="relative inline-flex h-2 w-2"
+              style={{ borderRadius: "50%", background: "#22c55e" }}
+            />
+          </span>
+          <span style={{ ...labelStyle, color: "#111827" }}>
+            {isLoading ? "Typing..." : "Online"}
+          </span>
+        </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
+      {/* Chat / Log Area */}
+      <div
+        className="flex-1 overflow-y-auto flex flex-col gap-8"
+        style={{ padding: "24px", fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif", background: "#ffffff" }}
+      >
         {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={cn(
-              "flex w-full",
-              msg.role === "user" ? "justify-end" : "justify-start"
-            )}
-          >
-            <div
-              className={cn(
-                "flex items-start max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-3 shadow-sm",
-                msg.role === "user"
-                  ? "bg-blue-600 text-white rounded-br-none"
-                  : "bg-white text-gray-800 border rounded-bl-none"
-              )}
-            >
-              {/* Icon */}
-              <div className="mr-3 mt-1 shrink-0">
-                {msg.role === "user" ? (
-                  <User className="h-5 w-5 opacity-70" />
-                ) : (
-                  <Bot className="h-5 w-5 text-blue-500" />
-                )}
-              </div>
-
-              {/* Text Content */}
-              <div className="text-sm md:text-base leading-relaxed">
-                {msg.content}
-              </div>
+          <div key={index} className="flex gap-4">
+            <div className="w-20 text-right shrink-0" style={{ color: "#9ca3af", fontSize: "12px" }}>
+              [{timestamps[index] ?? sessionStart}]
             </div>
+
+            {msg.role === "user" ? (
+              <div
+                className="flex-1"
+                style={{ background: "#f9fafb", border: "1px solid #e5e7eb", padding: "16px", borderRadius: "4px" }}
+              >
+                <div
+                  className="flex items-center gap-2"
+                  style={{
+                    marginBottom: "8px",
+                    color: "#6b7280",
+                    borderBottom: "1px solid #e5e7eb",
+                    paddingBottom: "8px",
+                  }}
+                >
+                  <User style={{ width: "14px", height: "14px" }} strokeWidth={1.5} />
+                  <span style={labelStyle}>User Query</span>
+                </div>
+                <div style={{ color: "#111827", fontSize: "13px", lineHeight: 1.7 }}>
+                  <span style={{ color: "#9ca3af" }}>&gt;</span> {msg.content}
+                </div>
+              </div>
+            ) : (
+              <div
+                className="flex-1 relative overflow-hidden"
+                style={{ background: "#0b0d10", border: "1px solid #0b0d10", padding: "16px", borderRadius: "4px" }}
+              >
+                <div
+                  className="absolute left-0 top-0 bottom-0"
+                  style={{ width: "3px", background: "#ffffff", opacity: 0.5 }}
+                />
+                <div
+                  className="flex items-center gap-2"
+                  style={{
+                    marginBottom: "12px",
+                    color: "#ffffff",
+                    borderBottom: "1px solid #2a2d35",
+                    paddingBottom: "8px",
+                  }}
+                >
+                  <span style={{ fontSize: "14px" }}>🤖</span>
+                  <span style={labelStyle}>RAO Engine</span>
+                </div>
+                <div style={{ color: "#e8e8ed", fontSize: "13px", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                  {msg.content}
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
         {/* Loading Indicator */}
         {isLoading && (
-          <div className="flex w-full justify-start">
-            <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-2xl rounded-bl-none border shadow-sm">
-               <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-               <span className="text-sm text-gray-500">Thinking...</span>
+          <div className="flex gap-4">
+            <div className="w-20 text-right shrink-0" style={{ color: "#9ca3af", fontSize: "12px" }}>
+              [{formatTime(new Date())}]
+            </div>
+            <div
+              className="flex-1 flex items-center gap-2"
+              style={{ background: "#0b0d10", border: "1px solid #0b0d10", padding: "12px 16px", borderRadius: "4px" }}
+            >
+              <Loader2 className="animate-spin" style={{ width: "14px", height: "14px", color: "#ffffff" }} />
+              <span style={{ color: "#9ca3af", fontSize: "13px" }}>Thinking...</span>
             </div>
           </div>
         )}
-        
+
         {/* Invisible div to scroll to */}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-white border-t">
-        <form onSubmit={handleSubmit} className="flex gap-4 max-w-4xl mx-auto">
-          <Input 
+      <div
+        className="shrink-0"
+        style={{ padding: "24px", borderTop: "1px solid #e5e7eb", background: "#ffffff" }}
+      >
+        <form
+          onSubmit={handleSubmit}
+          className="relative flex items-center w-full max-w-4xl mx-auto"
+        >
+          <span
+            className="absolute left-4 pointer-events-none"
+            style={{ color: "#9ca3af", fontSize: "13px" }}
+          >
+            &gt;
+          </span>
+          <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about your total sales, specific invoices..."
-            className="flex-1"
+            placeholder="Ask about invoices, Tally, GST, or vendors..."
             disabled={isLoading}
+            className={cn(
+              "w-full outline-none transition-colors disabled:opacity-50",
+              "focus:border-black"
+            )}
+            style={{
+              background: "#ffffff",
+              border: "1px solid #d1d5db",
+              color: "#111827",
+              fontSize: "13px",
+              padding: "12px 44px 12px 32px",
+              borderRadius: "4px",
+            }}
           />
-          <Button type="submit" disabled={isLoading || !input.trim()} className="bg-blue-600 hover:bg-blue-700">
-            <Send className="h-4 w-4" />
-          </Button>
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="absolute right-3 transition-colors disabled:opacity-40"
+            style={{ color: "#111827" }}
+          >
+            <Send style={{ width: "16px", height: "16px" }} />
+          </button>
         </form>
+        <div
+          className="max-w-4xl mx-auto flex justify-between items-center"
+          style={{ marginTop: "8px", fontSize: "10px", letterSpacing: "1px", color: "#9ca3af", textTransform: "uppercase" }}
+        >
+          <span>
+            Press{" "}
+            <kbd style={{ padding: "1px 4px", border: "1px solid #d1d5db", background: "#f9fafb" }}>
+              Cmd
+            </kbd>{" "}
+            +{" "}
+            <kbd style={{ padding: "1px 4px", border: "1px solid #d1d5db", background: "#f9fafb" }}>
+              K
+            </kbd>{" "}
+            for quick actions
+          </span>
+          <span>{isLoading ? "Typing..." : "Online"}</span>
+        </div>
       </div>
     </div>
   );
