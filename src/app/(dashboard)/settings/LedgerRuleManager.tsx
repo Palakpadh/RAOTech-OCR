@@ -90,17 +90,17 @@ export default function LedgerRuleManager({
     useState<Rule[]>(initialRules);
 
   return (
-    <div className="min-h-full bg-[#080808] text-white p-6 md:p-10 space-y-6">
+    <div className="min-h-full bg-[var(--spx-canvas)] text-[var(--spx-text)] p-6 md:p-10 space-y-6">
 
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
 
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--spx-text)]">
             Ledgers & Rules
           </h1>
 
-          <p className="text-zinc-500 text-sm mt-1">
+          <p className="text-[var(--spx-muted)] text-sm mt-1">
             {clientName ? `${clientName} · ` : ""}
             Chart of accounts and auto-mapping rules
           </p>
@@ -131,7 +131,7 @@ export default function LedgerRuleManager({
           className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
             tab === "ledgers"
               ? "bg-white text-black border-white"
-              : "bg-[#111111] border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-white"
+              : "bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-muted)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
           }`}
         >
           Chart of Accounts ({ledgers.length})
@@ -142,7 +142,7 @@ export default function LedgerRuleManager({
           className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
             tab === "rules"
               ? "bg-white text-black border-white"
-              : "bg-[#111111] border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-white"
+              : "bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-muted)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
           }`}
         >
           Mapping Rules ({rules.length})
@@ -219,10 +219,10 @@ function LedgersTab({
     <div className="space-y-6">
 
       {/* Add Ledger */}
-      <div className="border border-zinc-800 rounded-xl bg-[#0d0d0d] shadow-xl p-5 flex flex-wrap items-end gap-3">
+      <div className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl p-5 flex flex-wrap items-end gap-3">
 
         <div className="flex-1 min-w-[200px]">
-          <label className="text-xs text-zinc-500 block mb-1">
+          <label className="text-xs text-[var(--spx-muted)] block mb-1">
             Ledger name
           </label>
 
@@ -230,25 +230,25 @@ function LedgersTab({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Courier Charges"
-            className="bg-[#111111] border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600"
+            className="bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-text)] placeholder:text-[var(--spx-muted)] focus:border-[var(--spx-muted)]"
           />
         </div>
 
         <div className="min-w-[180px]">
-          <label className="text-xs text-zinc-500 block mb-1">
+          <label className="text-xs text-[var(--spx-muted)] block mb-1">
             Group
           </label>
 
           <select
             value={group}
             onChange={(e) => setGroup(e.target.value)}
-            className="w-full rounded-md border border-zinc-800 bg-[#111111] text-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-600"
+            className="w-full rounded-md border border-[var(--spx-border)] bg-[var(--spx-input-bg)] text-[var(--spx-text)] px-3 py-2 text-sm outline-none focus:border-[var(--spx-muted)]"
           >
             {GROUPS.map((g) => (
               <option
                 key={g}
                 value={g}
-                className="bg-[#111111]"
+                className="bg-[var(--spx-input-bg)]"
               >
                 {g.replaceAll("_", " ")}
               </option>
@@ -278,10 +278,10 @@ function LedgersTab({
           ([g, items]) => (
             <div
               key={g}
-              className="border border-zinc-800 rounded-xl bg-[#0d0d0d] shadow-xl overflow-hidden"
+              className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl overflow-hidden"
             >
 
-              <div className="px-4 py-3 border-b border-zinc-800 bg-[#111111] text-xs uppercase font-semibold text-zinc-500">
+              <div className="px-4 py-3 border-b border-[var(--spx-border)] bg-[var(--spx-input-bg)] text-xs uppercase font-semibold text-[var(--spx-muted)]">
                 {g.replaceAll("_", " ")}
               </div>
 
@@ -290,14 +290,14 @@ function LedgersTab({
                 {items.map((l) => (
                   <div
                     key={l.id}
-                    className="px-4 py-3 text-sm flex justify-between hover:bg-zinc-900 transition"
+                    className="px-4 py-3 text-sm flex justify-between hover:bg-[var(--spx-card-hover)] transition"
                   >
-                    <span className="text-zinc-200">
+                    <span className="text-[var(--spx-text)]">
                       {l.name}
                     </span>
 
                     {l.isSystem && (
-                      <span className="text-xs text-zinc-600">
+                      <span className="text-xs text-[var(--spx-muted)]">
                         system
                       </span>
                     )}
@@ -413,12 +413,12 @@ function RulesTab({
     <div className="space-y-6">
 
       {/* Rule Creator */}
-      <div className="border border-zinc-800 rounded-xl bg-[#0d0d0d] shadow-xl p-5 space-y-4">
+      <div className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl p-5 space-y-4">
 
         <div className="grid gap-3 md:grid-cols-2">
 
           <div>
-            <label className="text-xs text-zinc-500 block mb-1">
+            <label className="text-xs text-[var(--spx-muted)] block mb-1">
               When
             </label>
 
@@ -427,13 +427,13 @@ function RulesTab({
               onChange={(e) =>
                 setRuleType(e.target.value)
               }
-              className="w-full rounded-md border border-zinc-800 bg-[#111111] text-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-600"
+              className="w-full rounded-md border border-[var(--spx-border)] bg-[var(--spx-input-bg)] text-[var(--spx-text)] px-3 py-2 text-sm outline-none focus:border-[var(--spx-muted)]"
             >
               {RULE_TYPES.map((r) => (
                 <option
                   key={r.value}
                   value={r.value}
-                  className="bg-[#111111]"
+                  className="bg-[var(--spx-input-bg)]"
                 >
                   {r.label}
                 </option>
@@ -442,7 +442,7 @@ function RulesTab({
           </div>
 
           <div>
-            <label className="text-xs text-zinc-500 block mb-1">
+            <label className="text-xs text-[var(--spx-muted)] block mb-1">
               Value
             </label>
 
@@ -456,14 +456,14 @@ function RulesTab({
                   ? "27AABCT1234H2Z0"
                   : "keyword / value"
               }
-              className="bg-[#111111] border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600"
+              className="bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-text)] placeholder:text-[var(--spx-muted)] focus:border-[var(--spx-muted)]"
             />
           </div>
 
         </div>
 
         <div>
-          <label className="text-xs text-zinc-500 block mb-1">
+          <label className="text-xs text-[var(--spx-muted)] block mb-1">
             Map to ledger
           </label>
 
@@ -480,7 +480,7 @@ function RulesTab({
             variant="outline"
             onClick={preview}
             disabled={!pattern.trim() || !ledgerId}
-            className="bg-[#111111] border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            className="bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-text-secondary)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
           >
             Test / Preview
           </Button>
@@ -504,9 +504,9 @@ function RulesTab({
           </Button>
 
           {previewCount != null && (
-            <span className="text-sm text-zinc-500">
+            <span className="text-sm text-[var(--spx-muted)]">
               Would match{" "}
-              <strong className="text-white">
+              <strong className="text-[var(--spx-text)]">
                 {previewCount}
               </strong>{" "}
               past invoice(s)
@@ -517,12 +517,12 @@ function RulesTab({
       </div>
 
       {/* Rules Table */}
-      <div className="border border-zinc-800 rounded-xl bg-[#0d0d0d] shadow-xl overflow-hidden">
+      <div className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl overflow-hidden">
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
 
-            <thead className="text-zinc-500 bg-[#111111] uppercase text-xs border-b border-zinc-800">
+            <thead className="text-[var(--spx-muted)] bg-[var(--spx-input-bg)] uppercase text-xs border-b border-[var(--spx-border)]">
               <tr>
                 <th className="px-4 py-3">
                   Condition
@@ -546,7 +546,7 @@ function RulesTab({
                 <tr>
                   <td
                     colSpan={4}
-                    className="px-4 py-10 text-center text-zinc-600"
+                    className="px-4 py-10 text-center text-[var(--spx-muted)]"
                   >
                     No rules yet. Rules take priority
                     over learned mappings.
@@ -557,27 +557,27 @@ function RulesTab({
               {rules.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-b border-zinc-800 hover:bg-zinc-900 transition"
+                  className="border-b border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)] transition"
                 >
 
-                  <td className="px-4 py-3 text-zinc-300">
+                  <td className="px-4 py-3 text-[var(--spx-text-secondary)]">
                     {RULE_TYPES.find(
                       (t) => t.value === r.ruleType
                     )?.label || r.ruleType}
                   </td>
 
-                  <td className="px-4 py-3 font-mono text-xs text-zinc-400">
+                  <td className="px-4 py-3 font-mono text-xs text-[var(--spx-muted)]">
                     {r.pattern}
                   </td>
 
-                  <td className="px-4 py-3 text-zinc-200">
+                  <td className="px-4 py-3 text-[var(--spx-text)]">
                     {r.ledger?.name}
                   </td>
 
                   <td className="px-4 py-3">
                     <button
                       onClick={() => remove(r.id)}
-                      className="text-zinc-600 hover:text-red-400 transition"
+                      className="text-[var(--spx-muted)] hover:text-red-400 transition"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

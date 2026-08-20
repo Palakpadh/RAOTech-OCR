@@ -259,16 +259,16 @@ export default function TransactionsList({
   }
 
   return (
-    <div className="min-h-full bg-[#080808] text-white p-6 md:p-10 space-y-6">
+    <div className="min-h-full bg-[var(--spx-canvas)] text-[var(--spx-text)] p-6 md:p-10 space-y-6">
 
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--spx-text)]">
             Transactions
           </h1>
 
-          <p className="text-zinc-500 text-sm mt-1">
+          <p className="text-[var(--spx-muted)] text-sm mt-1">
             Map ledgers, approve, and export Tally XML
           </p>
         </div>
@@ -278,7 +278,7 @@ export default function TransactionsList({
             variant="outline"
             size="sm"
             onClick={toggleAllReady}
-            className="bg-[#111111] border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            className="bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-text-secondary)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
           >
             <CheckSquare className="mr-2 h-4 w-4" />
             Select ready
@@ -305,7 +305,7 @@ export default function TransactionsList({
                 selected.size ? [...selected] : undefined
               )
             }
-            className="bg-[#0b6b3a] hover:bg-[#0a5c32] text-white"
+            className="bg-[#0b6b3a] hover:bg-[#0a5c32] text-[var(--spx-text)]"
           >
             <Download className="mr-2 h-4 w-4" />
             Export Tally XML
@@ -327,7 +327,7 @@ export default function TransactionsList({
           className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
             tab === "invoices"
               ? "bg-white text-black border-white"
-              : "bg-[#111111] text-zinc-400 border-zinc-800 hover:bg-zinc-900 hover:text-white"
+              : "bg-[var(--spx-input-bg)] text-[var(--spx-muted)] border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
           }`}
         >
           Invoices ({vouchers.length})
@@ -345,7 +345,7 @@ export default function TransactionsList({
           className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
             tab === "bank"
               ? "bg-white text-black border-white"
-              : "bg-[#111111] text-zinc-400 border-zinc-800 hover:bg-zinc-900 hover:text-white"
+              : "bg-[var(--spx-input-bg)] text-[var(--spx-muted)] border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
           }`}
         >
           Bank Statements ({statements.length})
@@ -366,8 +366,8 @@ export default function TransactionsList({
                 }}
                 className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
                   filter === f
-                    ? "bg-zinc-800 text-white border-zinc-700"
-                    : "bg-[#111111] text-zinc-500 border-zinc-800 hover:text-white"
+                    ? "bg-zinc-800 text-[var(--spx-text)] border-zinc-700"
+                    : "bg-[var(--spx-input-bg)] text-[var(--spx-muted)] border-[var(--spx-border)] hover:text-[var(--spx-text)]"
                 }`}
               >
                 {f === "all"
@@ -383,12 +383,12 @@ export default function TransactionsList({
 
       {/* Invoices */}
       {tab === "invoices" ? (
-        <div className="border border-zinc-800 rounded-xl bg-[#0d0d0d] shadow-xl overflow-hidden">
+        <div className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl overflow-hidden">
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
 
-              <thead className="text-zinc-500 bg-[#111111] uppercase text-xs border-b border-zinc-800">
+              <thead className="text-[var(--spx-muted)] bg-[var(--spx-input-bg)] uppercase text-xs border-b border-[var(--spx-border)]">
                 <tr>
                   <th className="px-4 py-3 w-10"></th>
                   <th className="px-4 py-3">Vendor</th>
@@ -417,7 +417,7 @@ export default function TransactionsList({
                 {filtered.map((v) => (
                   <tr
                     key={v.id}
-                    className="border-b border-zinc-800 hover:bg-zinc-900/70 transition group"
+                    className="border-b border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)]/70 transition group"
                   >
                     <td className="px-4 py-3">
                       <input
@@ -435,22 +435,22 @@ export default function TransactionsList({
                     <td className="px-4 py-3 font-medium">
                       <Link
                         href={`/vouchers/${v.id}`}
-                        className="flex items-center gap-2 text-zinc-200 group-hover:text-white"
+                        className="flex items-center gap-2 text-[var(--spx-text)] group-hover:text-[var(--spx-text)]"
                       >
-                        <FileText className="h-4 w-4 text-zinc-500" />
+                        <FileText className="h-4 w-4 text-[var(--spx-muted)]" />
                         {v.vendor}
                       </Link>
                     </td>
 
-                    <td className="px-4 py-3 text-zinc-500">
+                    <td className="px-4 py-3 text-[var(--spx-muted)]">
                       {v.invoiceNumber}
                     </td>
 
-                    <td className="px-4 py-3 text-zinc-500">
+                    <td className="px-4 py-3 text-[var(--spx-muted)]">
                       {v.type}
                     </td>
 
-                    <td className="px-4 py-3 text-right font-semibold text-white">
+                    <td className="px-4 py-3 text-right font-semibold text-[var(--spx-text)]">
                       {money(v.amount)}
                     </td>
 
@@ -466,7 +466,7 @@ export default function TransactionsList({
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/vouchers/${v.id}`}
-                        className="inline-flex items-center gap-1 text-zinc-400 hover:text-white"
+                        className="inline-flex items-center gap-1 text-[var(--spx-muted)] hover:text-[var(--spx-text)]"
                       >
                         Map
                         <ArrowRight className="h-3.5 w-3.5" />
@@ -483,12 +483,12 @@ export default function TransactionsList({
       ) : (
 
         /* Bank Statements */
-        <div className="border border-zinc-800 rounded-xl bg-[#0d0d0d] shadow-xl overflow-hidden">
+        <div className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl overflow-hidden">
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
 
-              <thead className="text-zinc-500 bg-[#111111] uppercase text-xs border-b border-zinc-800">
+              <thead className="text-[var(--spx-muted)] bg-[var(--spx-input-bg)] uppercase text-xs border-b border-[var(--spx-border)]">
                 <tr>
                   <th className="px-4 py-3">Bank</th>
                   <th className="px-4 py-3">File</th>
@@ -519,27 +519,27 @@ export default function TransactionsList({
                 {statements.map((s) => (
                   <tr
                     key={s.id}
-                    className="border-b border-zinc-800 hover:bg-zinc-900/70 transition group"
+                    className="border-b border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)]/70 transition group"
                   >
                     <td className="px-4 py-3 font-medium">
                       <Link
                         href={`/bank/${s.id}`}
-                        className="flex items-center gap-2 text-zinc-200 hover:text-white"
+                        className="flex items-center gap-2 text-[var(--spx-text)] hover:text-[var(--spx-text)]"
                       >
-                        <Landmark className="h-4 w-4 text-zinc-500" />
+                        <Landmark className="h-4 w-4 text-[var(--spx-muted)]" />
                         {s.bankName || "Bank Statement"}
                       </Link>
                     </td>
 
-                    <td className="px-4 py-3 text-zinc-500 truncate max-w-[160px]">
+                    <td className="px-4 py-3 text-[var(--spx-muted)] truncate max-w-[160px]">
                       {s.fileName}
                     </td>
 
-                    <td className="px-4 py-3 text-center text-zinc-500">
+                    <td className="px-4 py-3 text-center text-[var(--spx-muted)]">
                       {s.txnCount}
                     </td>
 
-                    <td className="px-4 py-3 text-right text-zinc-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-right text-[var(--spx-muted)] whitespace-nowrap">
                       <span className="text-emerald-400">
                         {money(s.totalIn)}
                       </span>{" "}
@@ -559,7 +559,7 @@ export default function TransactionsList({
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/bank/${s.id}`}
-                        className="inline-flex items-center gap-1 text-zinc-400 hover:text-white"
+                        className="inline-flex items-center gap-1 text-[var(--spx-muted)] hover:text-[var(--spx-text)]"
                       >
                         Map
                         <ArrowRight className="h-3.5 w-3.5" />

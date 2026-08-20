@@ -67,18 +67,19 @@ export default async function Dashboard() {
       >
         <div className="min-w-0">
           <h1
-            className="text-white font-bold"
+            className="font-bold"
             style={{
               fontSize: "clamp(22px, 5vw, 28px)",
               letterSpacing: "0.5px",
               fontFamily: "'Inter', system-ui, sans-serif",
+              color: "var(--spx-text)",
             }}
           >
             Dashboard
           </h1>
           <p
             className="truncate"
-            style={{ fontSize: "13px", color: "#6b6f78", marginTop: "4px", letterSpacing: "0.3px" }}
+            style={{ fontSize: "13px", color: "var(--spx-muted)", marginTop: "4px", letterSpacing: "0.3px" }}
           >
             {client.name} · Welcome back, {user.name || "User"}
           </p>
@@ -90,9 +91,9 @@ export default async function Dashboard() {
               size="sm"
               className="w-full sm:w-auto"
               style={{
-                borderColor: "#2a2d35",
+                borderColor: "var(--spx-border)",
                 background: "transparent",
-                color: "#e8e8ed",
+                color: "var(--spx-text)",
                 borderRadius: "2px",
                 fontSize: "12px",
                 letterSpacing: "1px",
@@ -107,8 +108,8 @@ export default async function Dashboard() {
             <Button
               className="w-full sm:w-auto"
               style={{
-                background: "#ffffff",
-                color: "#0b0d10",
+                background: "var(--spx-text)",
+                color: "var(--spx-canvas)",
                 borderRadius: "2px",
                 fontSize: "12px",
                 letterSpacing: "1px",
@@ -124,7 +125,7 @@ export default async function Dashboard() {
       </div>
 
       {/* ── Top Stat Cards: Boxy Grid with Large Numbers ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: "1px", background: "#2a2d35", marginBottom: "24px" }}>
+      <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: "1px", background: "var(--spx-border)", marginBottom: "24px" }}>
         <StatCard
           icon={<ClipboardList style={{ width: "18px", height: "18px" }} strokeWidth={1.5} />}
           label="Pending Review"
@@ -150,7 +151,7 @@ export default async function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: "1px", background: "#2a2d35", marginBottom: "24px" }}>
+      <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: "1px", background: "var(--spx-border)", marginBottom: "24px" }}>
         <StatCard
           icon={<AlertTriangle style={{ width: "18px", height: "18px" }} strokeWidth={1.5} />}
           label="Draft Vouchers"
@@ -177,7 +178,7 @@ export default async function Dashboard() {
       {/* ── Main Grid: Table + Quick Actions ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px]" style={{ gap: "24px" }}>
         {/* Vouchers Table */}
-        <div style={{ border: "1px solid #2a2d35", background: "#0f1115" }}>
+        <div style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)" }}>
           {/* Table Header Bar */}
           <div
             style={{
@@ -185,53 +186,36 @@ export default async function Dashboard() {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "14px 20px",
-              borderBottom: "1px solid #2a2d35",
+              borderBottom: "1px solid var(--spx-border)",
             }}
           >
             <span
-              className="text-[#6b6f78] uppercase"
-              style={{ fontSize: "11px", letterSpacing: "1.5px", fontWeight: 500 }}
+              className="uppercase"
+              style={{ fontSize: "11px", letterSpacing: "1.5px", fontWeight: 500, color: "var(--spx-muted)" }}
             >
               Vouchers to Review
             </span>
-            {showExtraPages ? (
-              <Link
-                href="/review"
-                style={{
-                  fontSize: "11px",
-                  letterSpacing: "1.2px",
-                  textTransform: "uppercase" as const,
-                  color: "#e8e8ed",
-                  border: "1px solid #2a2d35",
-                  padding: "5px 14px",
-                  fontWeight: 500,
-                }}
-              >
-                View All
-              </Link>
-            ) : (
-              <Link
-                href="/transactions"
-                style={{
-                  fontSize: "11px",
-                  letterSpacing: "1.2px",
-                  textTransform: "uppercase" as const,
-                  color: "#e8e8ed",
-                  border: "1px solid #2a2d35",
-                  padding: "5px 14px",
-                  fontWeight: 500,
-                }}
-              >
-                View All
-              </Link>
-            )}
+            <Link
+              href={showExtraPages ? "/review" : "/transactions"}
+              style={{
+                fontSize: "11px",
+                letterSpacing: "1.2px",
+                textTransform: "uppercase" as const,
+                color: "var(--spx-text)",
+                border: "1px solid var(--spx-border)",
+                padding: "5px 14px",
+                fontWeight: 500,
+              }}
+            >
+              View All
+            </Link>
           </div>
 
           {/* Table */}
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #2a2d35" }}>
+                <tr style={{ borderBottom: "1px solid var(--spx-border)" }}>
                   {["Vendor", "Invoice #", "Type", "Amount", "Status"].map((h) => (
                     <th
                       key={h}
@@ -239,7 +223,7 @@ export default async function Dashboard() {
                         padding: "12px 16px",
                         fontSize: "11px",
                         fontWeight: 400,
-                        color: "#6b6f78",
+                        color: "var(--spx-muted)",
                         textTransform: "uppercase" as const,
                         letterSpacing: "1.5px",
                         textAlign: h === "Amount" ? "right" : "left",
@@ -256,7 +240,7 @@ export default async function Dashboard() {
                   <tr>
                     <td
                       colSpan={5}
-                      style={{ padding: "48px 16px", textAlign: "center", color: "#6b6f78", fontSize: "13px" }}
+                      style={{ padding: "48px 16px", textAlign: "center", color: "var(--spx-muted)", fontSize: "13px" }}
                     >
                       No drafts pending. Upload an invoice to generate a voucher.
                     </td>
@@ -265,14 +249,13 @@ export default async function Dashboard() {
                 {reviewList.map((v) => (
                   <tr
                     key={v.id}
-                    style={{ borderBottom: "1px solid rgba(42, 45, 53, 0.5)" }}
-                    className="hover:bg-white/[0.02] transition"
+                    style={{ borderBottom: "1px solid var(--spx-border-subtle)" }}
                   >
                     <td style={{ padding: "14px 16px" }}>
                       <Link
                         href={`/vouchers/${v.id}`}
-                        className="text-white hover:underline"
-                        style={{ fontSize: "14px", fontWeight: 500 }}
+                        className="hover:underline"
+                        style={{ fontSize: "14px", fontWeight: 500, color: "var(--spx-text)" }}
                       >
                         {v.vendor}
                       </Link>
@@ -280,14 +263,14 @@ export default async function Dashboard() {
                     <td
                       style={{
                         padding: "14px 16px",
-                        color: "#a0a0a8",
+                        color: "var(--spx-text-secondary)",
                         fontSize: "13px",
                         fontFamily: "'Geist Mono', 'Courier New', monospace",
                       }}
                     >
                       {v.invoiceNumber}
                     </td>
-                    <td style={{ padding: "14px 16px", color: "#a0a0a8", fontSize: "13px" }}>
+                    <td style={{ padding: "14px 16px", color: "var(--spx-text-secondary)", fontSize: "13px" }}>
                       {v.type}
                     </td>
                     <td
@@ -295,7 +278,7 @@ export default async function Dashboard() {
                         padding: "14px 16px",
                         textAlign: "right",
                         fontWeight: 600,
-                        color: "#e8e8ed",
+                        color: "var(--spx-text)",
                         fontSize: "14px",
                         fontVariantNumeric: "tabular-nums",
                       }}
@@ -358,16 +341,16 @@ export default async function Dashboard() {
         </div>
 
         {/* ── Right Column: Quick Actions ── */}
-        <div style={{ border: "1px solid #2a2d35", background: "#0f1115" }}>
+        <div style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)" }}>
           <div
             style={{
               padding: "14px 20px",
-              borderBottom: "1px solid #2a2d35",
+              borderBottom: "1px solid var(--spx-border)",
             }}
           >
             <span
-              className="text-[#6b6f78] uppercase"
-              style={{ fontSize: "11px", letterSpacing: "1.5px", fontWeight: 500 }}
+              className="uppercase"
+              style={{ fontSize: "11px", letterSpacing: "1.5px", fontWeight: 500, color: "var(--spx-muted)" }}
             >
               Quick Actions
             </span>
@@ -376,13 +359,12 @@ export default async function Dashboard() {
             {showExtraPages && (
               <Link
                 href="/gst"
-                className="hover:bg-white/[0.03] transition"
                 style={{
                   display: "block",
-                  border: "1px solid #2a2d35",
+                  border: "1px solid var(--spx-border)",
                   padding: "12px 14px",
                   fontSize: "13px",
-                  color: "#a0a0a8",
+                  color: "var(--spx-text-secondary)",
                 }}
               >
                 Run GST reconciliation (GSTR-2B)
@@ -391,13 +373,12 @@ export default async function Dashboard() {
             {showExtraPages && (
               <Link
                 href="/pipeline"
-                className="hover:bg-white/[0.03] transition"
                 style={{
                   display: "block",
-                  border: "1px solid #2a2d35",
+                  border: "1px solid var(--spx-border)",
                   padding: "12px 14px",
                   fontSize: "13px",
-                  color: "#a0a0a8",
+                  color: "var(--spx-text-secondary)",
                 }}
               >
                 View pipeline board
@@ -406,13 +387,12 @@ export default async function Dashboard() {
             {showExtraPages && (
               <Link
                 href="/reports"
-                className="hover:bg-white/[0.03] transition"
                 style={{
                   display: "block",
-                  border: "1px solid #2a2d35",
+                  border: "1px solid var(--spx-border)",
                   padding: "12px 14px",
                   fontSize: "13px",
-                  color: "#a0a0a8",
+                  color: "var(--spx-text-secondary)",
                 }}
               >
                 GST summary &amp; reports
@@ -462,7 +442,7 @@ function StatCard({
   icon,
   label,
   value,
-  valueColor = "#e8e8ed",
+  valueColor,
   href,
   alert = false,
 }: {
@@ -476,10 +456,10 @@ function StatCard({
 }) {
   const card = (
     <div
-      className="hover:bg-[#161920] transition min-w-0"
+      className="min-w-0 transition"
       style={{
         padding: "16px 18px",
-        background: alert ? "rgba(229, 62, 62, 0.04)" : "#0f1115",
+        background: alert ? "rgba(229, 62, 62, 0.04)" : "var(--spx-card)",
         borderRight: alert ? "2px solid rgba(229, 62, 62, 0.5)" : undefined,
       }}
     >
@@ -489,7 +469,7 @@ function StatCard({
           style={{
             fontSize: "11px",
             fontWeight: 500,
-            color: "#6b6f78",
+            color: "var(--spx-muted)",
             textTransform: "uppercase" as const,
             letterSpacing: "1.5px",
             fontFamily: "'Inter', system-ui, sans-serif",
@@ -497,14 +477,14 @@ function StatCard({
         >
           {label}
         </span>
-        <span className="shrink-0" style={{ color: "#3a3d45" }}>{icon}</span>
+        <span className="shrink-0" style={{ color: "var(--spx-icon-dim)" }}>{icon}</span>
       </div>
       <p
         className="truncate"
         style={{
           fontSize: "clamp(20px, 4.5vw, 42px)",
           fontWeight: 700,
-          color: valueColor,
+          color: valueColor || "var(--spx-text)",
           lineHeight: 1,
           fontFamily: "'Inter', system-ui, sans-serif",
           letterSpacing: "-0.5px",

@@ -86,16 +86,16 @@ export default function ChatPage() {
   return (
     <div
       className="flex flex-col h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-50px)]"
-      style={{ background: "#0b0d10" }}
+      style={{ background: "var(--spx-canvas)" }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between shrink-0"
-        style={{ height: "48px", borderBottom: "1px solid #2a2d35", background: "#0f1115", padding: "0 24px" }}
+        style={{ height: "48px", borderBottom: "1px solid var(--spx-border)", background: "var(--spx-card)", padding: "0 24px" }}
       >
         <div className="flex items-center gap-2">
           <span style={{ fontSize: "16px" }}>🤖</span>
-          <span style={{ fontSize: "14px", fontWeight: 600, color: "#e8e8ed", fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif" }}>
+          <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--spx-text)", fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif" }}>
             AI Assistant
           </span>
         </div>
@@ -110,7 +110,7 @@ export default function ChatPage() {
               style={{ borderRadius: "50%", background: "#22c55e" }}
             />
           </span>
-          <span style={{ ...labelStyle, color: "#e8e8ed" }}>
+          <span style={{ ...labelStyle, color: "var(--spx-text)" }}>
             {isLoading ? "Typing..." : "Online"}
           </span>
         </div>
@@ -123,53 +123,53 @@ export default function ChatPage() {
       >
         {messages.map((msg, index) => (
           <div key={index} className="flex gap-4">
-            <div className="w-20 text-right shrink-0" style={{ color: "#6b6f78", fontSize: "12px" }}>
+            <div className="w-20 text-right shrink-0" style={{ color: "var(--spx-muted)", fontSize: "12px" }}>
               [{timestamps[index] ?? sessionStart}]
             </div>
 
             {msg.role === "user" ? (
               <div
                 className="flex-1"
-                style={{ background: "#0f1115", border: "1px solid #2a2d35", padding: "16px" }}
+                style={{ background: "var(--spx-card)", border: "1px solid var(--spx-border)", padding: "16px" }}
               >
                 <div
                   className="flex items-center gap-2"
                   style={{
                     marginBottom: "8px",
-                    color: "#6b6f78",
-                    borderBottom: "1px solid #2a2d35",
+                    color: "var(--spx-muted)",
+                    borderBottom: "1px solid var(--spx-border)",
                     paddingBottom: "8px",
                   }}
                 >
                   <User style={{ width: "14px", height: "14px" }} strokeWidth={1.5} />
                   <span style={labelStyle}>You</span>
                 </div>
-                <div style={{ color: "#ffffff", fontSize: "13px", lineHeight: 1.7 }}>
-                  <span style={{ color: "#6b6f78" }}>&gt;</span> {msg.content}
+                <div style={{ color: "var(--spx-text)", fontSize: "13px", lineHeight: 1.7 }}>
+                  <span style={{ color: "var(--spx-muted)" }}>&gt;</span> {msg.content}
                 </div>
               </div>
             ) : (
               <div
                 className="flex-1 relative overflow-hidden"
-                style={{ background: "#0f1115", border: "1px solid #2a2d35", padding: "16px" }}
+                style={{ background: "var(--spx-card)", border: "1px solid var(--spx-border)", padding: "16px" }}
               >
                 <div
                   className="absolute left-0 top-0 bottom-0"
-                  style={{ width: "3px", background: "#e8e8ed", opacity: 0.5 }}
+                  style={{ width: "3px", background: "var(--spx-text)", opacity: 0.5 }}
                 />
                 <div
                   className="flex items-center gap-2"
                   style={{
                     marginBottom: "12px",
-                    color: "#ffffff",
-                    borderBottom: "1px solid #2a2d35",
+                    color: "var(--spx-text)",
+                    borderBottom: "1px solid var(--spx-border)",
                     paddingBottom: "8px",
                   }}
                 >
                   <span style={{ fontSize: "14px" }}>🤖</span>
                   <span style={labelStyle}>AI Assistant</span>
                 </div>
-                <div style={{ color: "#e8e8ed", fontSize: "13px", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                <div style={{ color: "var(--spx-text)", fontSize: "13px", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                   {msg.content}
                 </div>
               </div>
@@ -180,15 +180,15 @@ export default function ChatPage() {
         {/* Loading Indicator */}
         {isLoading && (
           <div className="flex gap-4">
-            <div className="w-20 text-right shrink-0" style={{ color: "#6b6f78", fontSize: "12px" }}>
+            <div className="w-20 text-right shrink-0" style={{ color: "var(--spx-muted)", fontSize: "12px" }}>
               [{formatTime(new Date())}]
             </div>
             <div
               className="flex-1 flex items-center gap-2"
-              style={{ background: "#0f1115", border: "1px solid #2a2d35", padding: "12px 16px" }}
+              style={{ background: "var(--spx-card)", border: "1px solid var(--spx-border)", padding: "12px 16px" }}
             >
-              <Loader2 className="animate-spin" style={{ width: "14px", height: "14px", color: "#e8e8ed" }} />
-              <span style={{ color: "#6b6f78", fontSize: "13px" }}>Thinking...</span>
+              <Loader2 className="animate-spin" style={{ width: "14px", height: "14px", color: "var(--spx-text)" }} />
+              <span style={{ color: "var(--spx-muted)", fontSize: "13px" }}>Thinking...</span>
             </div>
           </div>
         )}
@@ -200,7 +200,7 @@ export default function ChatPage() {
       {/* Input Area */}
       <div
         className="shrink-0"
-        style={{ padding: "24px", borderTop: "1px solid #2a2d35", background: "#0f1115" }}
+        style={{ padding: "24px", borderTop: "1px solid var(--spx-border)", background: "var(--spx-card)" }}
       >
         <form
           onSubmit={handleSubmit}
@@ -208,7 +208,7 @@ export default function ChatPage() {
         >
           <span
             className="absolute left-4 pointer-events-none"
-            style={{ color: "#6b6f78", fontSize: "13px" }}
+            style={{ color: "var(--spx-muted)", fontSize: "13px" }}
           >
             &gt;
           </span>
@@ -222,9 +222,9 @@ export default function ChatPage() {
               "focus:border-white"
             )}
             style={{
-              background: "#0b0d10",
-              border: "1px solid #2a2d35",
-              color: "#ffffff",
+              background: "var(--spx-canvas)",
+              border: "1px solid var(--spx-border)",
+              color: "var(--spx-text)",
               fontSize: "13px",
               padding: "12px 44px 12px 32px",
             }}
@@ -233,22 +233,22 @@ export default function ChatPage() {
             type="submit"
             disabled={isLoading || !input.trim()}
             className="absolute right-3 transition-colors disabled:opacity-40"
-            style={{ color: "#6b6f78" }}
+            style={{ color: "var(--spx-muted)" }}
           >
             <Send style={{ width: "16px", height: "16px" }} />
           </button>
         </form>
         <div
           className="max-w-4xl mx-auto flex justify-between items-center"
-          style={{ marginTop: "8px", fontSize: "10px", letterSpacing: "1px", color: "#6b6f78", textTransform: "uppercase" }}
+          style={{ marginTop: "8px", fontSize: "10px", letterSpacing: "1px", color: "var(--spx-muted)", textTransform: "uppercase" }}
         >
           <span>
             Press{" "}
-            <kbd style={{ padding: "1px 4px", border: "1px solid #2a2d35", background: "#161920" }}>
+            <kbd style={{ padding: "1px 4px", border: "1px solid var(--spx-border)", background: "var(--spx-input-bg)" }}>
               Cmd
             </kbd>{" "}
             +{" "}
-            <kbd style={{ padding: "1px 4px", border: "1px solid #2a2d35", background: "#161920" }}>
+            <kbd style={{ padding: "1px 4px", border: "1px solid var(--spx-border)", background: "var(--spx-input-bg)" }}>
               K
             </kbd>{" "}
             for quick actions

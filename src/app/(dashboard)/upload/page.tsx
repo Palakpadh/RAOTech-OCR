@@ -536,23 +536,23 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6" style={{ background: "#0b0d10" }}>
+    <div className="p-8 max-w-6xl mx-auto space-y-6" style={{ background: "var(--spx-canvas)" }}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2
-            className="font-bold uppercase text-white"
+            className="font-bold uppercase text-[var(--spx-text)]"
             style={{ fontSize: "22px", letterSpacing: "2px", fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif" }}
           >
             Upload &amp; Extract {docType === "bank" ? "Bank Statements" : "Invoices"}
           </h2>
           <p
             className="mt-1"
-            style={{ fontSize: "11px", letterSpacing: "1.5px", color: "#6b6f78", textTransform: "uppercase" as const }}
+            style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--spx-muted)", textTransform: "uppercase" as const }}
           >
             AI ingestion &amp; OCR extraction pipeline
           </p>
         </div>
-        <div className="flex overflow-hidden text-sm" style={{ border: "1px solid #2a2d35" }}>
+        <div className="flex overflow-hidden text-sm" style={{ border: "1px solid var(--spx-border)" }}>
           {([["invoice", "Invoice"], ["bank", "Bank Statement"]] as const).map(([val, label]) => (
             <button
               key={val}
@@ -566,8 +566,8 @@ export default function UploadPage() {
                 fontSize: "11px",
                 letterSpacing: "1.2px",
                 fontWeight: 500,
-                background: docType === val ? "#ffffff" : "transparent",
-                color: docType === val ? "#0b0d10" : "#6b6f78",
+                background: docType === val ? "var(--spx-text)" : "transparent",
+                color: docType === val ? "var(--spx-canvas)" : "var(--spx-muted)",
               }}
             >
               {label}
@@ -579,12 +579,12 @@ export default function UploadPage() {
       {autoDetected && (
         <div
           className="flex items-center gap-2 text-sm"
-          style={{ border: "1px solid #2a2d35", background: "#12131a", padding: "10px 14px", color: "#9ba0ab" }}
+          style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)", padding: "10px 14px", color: "var(--spx-text-secondary)" }}
         >
-          {classifying && <Loader2 className="h-4 w-4 animate-spin shrink-0 text-white" />}
+          {classifying && <Loader2 className="h-4 w-4 animate-spin shrink-0 text-[var(--spx-text)]" />}
           <span>
-            <span className="text-white">Auto-detected:</span> {autoDetected}{" "}
-            <span style={{ color: "#6b6f78" }}>(you can override with the toggle)</span>
+            <span className="text-[var(--spx-text)]">Auto-detected:</span> {autoDetected}{" "}
+            <span style={{ color: "var(--spx-muted)" }}>(you can override with the toggle)</span>
           </span>
         </div>
       )}
@@ -593,8 +593,8 @@ export default function UploadPage() {
       <div
         className="text-center transition-all cursor-pointer"
         style={{
-          border: `1px dashed ${isDragging ? "#ffffff" : "#2a2d35"}`,
-          background: isDragging ? "#161920" : "#12131a",
+          border: `1px dashed ${isDragging ? "var(--spx-text)" : "var(--spx-border)"}`,
+          background: isDragging ? "var(--spx-input-bg)" : "var(--spx-card)",
           padding: "40px 32px",
         }}
         onDrop={handleDrop}
@@ -614,19 +614,19 @@ export default function UploadPage() {
             e.currentTarget.value = "";
           }}
         />
-        <UploadCloud className="mx-auto h-10 w-10 mb-4" style={{ color: "#6b6f78" }} strokeWidth={1.5} />
-        <p className="text-white" style={{ fontSize: "15px", fontWeight: 500 }}>
+        <UploadCloud className="mx-auto h-10 w-10 mb-4" style={{ color: "var(--spx-muted)" }} strokeWidth={1.5} />
+        <p className="text-[var(--spx-text)]" style={{ fontSize: "15px", fontWeight: 500 }}>
           {documents.length
             ? `${documents.length} document(s) selected`
             : "Drag & drop up to 15 invoice files here"}
         </p>
-        <p className="mt-1" style={{ fontSize: "12px", color: "#6b6f78" }}>
+        <p className="mt-1" style={{ fontSize: "12px", color: "var(--spx-muted)" }}>
           Supports PDF, JPG, PNG, BMP, TIFF, WEBP (max 20MB each)
         </p>
 
         {documents.length > 0 && (
           <div className="mt-5 flex items-center justify-center gap-4">
-            <span style={{ fontSize: "12px", color: "#6b6f78" }}>
+            <span style={{ fontSize: "12px", color: "var(--spx-muted)" }}>
               Extracted {extractedCount}/{documents.length}
             </span>
             <button
@@ -637,8 +637,8 @@ export default function UploadPage() {
               disabled={extractingAll}
               className="inline-flex items-center uppercase disabled:opacity-50"
               style={{
-                background: "#ffffff",
-                color: "#0b0d10",
+                background: "var(--spx-text)",
+                color: "var(--spx-canvas)",
                 padding: "9px 18px",
                 fontSize: "11px",
                 letterSpacing: "1.2px",
@@ -672,8 +672,8 @@ export default function UploadPage() {
                 className="inline-flex items-center uppercase disabled:opacity-50"
                 style={{
                   background: "transparent",
-                  color: "#ffffff",
-                  border: "1px solid #2a2d35",
+                  color: "var(--spx-text)",
+                  border: "1px solid var(--spx-border)",
                   padding: "9px 18px",
                   fontSize: "11px",
                   letterSpacing: "1.2px",
@@ -715,7 +715,7 @@ export default function UploadPage() {
 
       {documents.length > 0 && (
         <div
-          style={{ border: "1px solid #2a2d35", background: "#12131a", padding: "10px 14px", fontSize: "12px", color: "#9ba0ab" }}
+          style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)", padding: "10px 14px", fontSize: "12px", color: "var(--spx-text-secondary)" }}
         >
           Added {documents.length}/{MAX_FILES} documents &middot; Extracted {extractedCount} &middot; Saved {savedCount}
         </div>
@@ -727,15 +727,15 @@ export default function UploadPage() {
           <div
             key={doc.id}
             className="space-y-4 animate-in fade-in"
-            style={{ border: "1px solid #2a2d35", background: "#12131a", padding: "24px" }}
+            style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)", padding: "24px" }}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="flex items-center gap-2 text-white" style={{ fontSize: "15px", fontWeight: 600 }}>
-                  <FileUp className="h-4 w-4" style={{ color: "#6b6f78" }} />
+                  <FileUp className="h-4 w-4" style={{ color: "var(--spx-muted)" }} />
                   {docIndex + 1}. {doc.file.name}
                 </h3>
-                <p className="mt-1" style={{ fontSize: "11px", color: "#6b6f78" }}>
+                <p className="mt-1" style={{ fontSize: "11px", color: "var(--spx-muted)" }}>
                   {(doc.file.size / 1024 / 1024).toFixed(2)} MB
                 </p>
               </div>
@@ -768,7 +768,7 @@ export default function UploadPage() {
                   onClick={() => extractSingle(doc.id)}
                   disabled={doc.extracting}
                   className="inline-flex items-center uppercase disabled:opacity-50"
-                  style={{ border: "1px solid #2a2d35", color: "#ffffff", background: "transparent", padding: "8px 14px", fontSize: "11px", letterSpacing: "1px" }}
+                  style={{ border: "1px solid var(--spx-border)", color: "var(--spx-text)", background: "transparent", padding: "8px 14px", fontSize: "11px", letterSpacing: "1px" }}
                 >
                   {doc.extracting ? (
                     <>
@@ -785,7 +785,7 @@ export default function UploadPage() {
                     onClick={() => (docType === "bank" ? saveBankAndMap(doc.id) : saveAndMap(doc.id))}
                     disabled={doc.saving}
                     className="inline-flex items-center uppercase disabled:opacity-50"
-                    style={{ background: "#ffffff", color: "#0b0d10", padding: "8px 14px", fontSize: "11px", letterSpacing: "1px", fontWeight: 600 }}
+                    style={{ background: "var(--spx-text)", color: "var(--spx-canvas)", padding: "8px 14px", fontSize: "11px", letterSpacing: "1px", fontWeight: 600 }}
                   >
                     {doc.saving ? (
                       <>
@@ -802,7 +802,7 @@ export default function UploadPage() {
                 <button
                   onClick={() => removeDocument(doc.id)}
                   className="inline-flex items-center uppercase"
-                  style={{ border: "1px solid #2a2d35", color: "#6b6f78", background: "transparent", padding: "8px 14px", fontSize: "11px", letterSpacing: "1px" }}
+                  style={{ border: "1px solid var(--spx-border)", color: "var(--spx-muted)", background: "transparent", padding: "8px 14px", fontSize: "11px", letterSpacing: "1px" }}
                 >
                   Remove
                 </button>
@@ -820,10 +820,10 @@ export default function UploadPage() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1" style={{ border: "1px solid #2a2d35", background: "#0f1115", padding: "16px" }}>
+              <div className="lg:col-span-1" style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)", padding: "16px" }}>
                 <h4
                   className="mb-3 flex items-center gap-1 uppercase"
-                  style={{ fontSize: "11px", letterSpacing: "1.2px", color: "#6b6f78" }}
+                  style={{ fontSize: "11px", letterSpacing: "1.2px", color: "var(--spx-muted)" }}
                 >
                   <ImageIcon className="h-3.5 w-3.5" /> Preview
                 </h4>
@@ -833,26 +833,26 @@ export default function UploadPage() {
                     src={doc.previewUrl}
                     title={`Preview ${doc.file.name}`}
                     className="w-full h-[420px]"
-                    style={{ border: "1px solid #2a2d35" }}
+                    style={{ border: "1px solid var(--spx-border)" }}
                   />
                 ) : doc.previewUrl ? (
                   <img
                     src={doc.previewUrl}
                     alt={doc.file.name}
                     className="w-full object-contain max-h-[420px]"
-                    style={{ border: "1px solid #2a2d35" }}
+                    style={{ border: "1px solid var(--spx-border)" }}
                   />
                 ) : (
-                  <p style={{ fontSize: "12px", color: "#6b6f78" }}>Preview not available</p>
+                  <p style={{ fontSize: "12px", color: "var(--spx-muted)" }}>Preview not available</p>
                 )}
               </div>
 
-              <div className="lg:col-span-2" style={{ border: "1px solid #2a2d35", background: "#0f1115", padding: "24px" }}>
+              <div className="lg:col-span-2" style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)", padding: "24px" }}>
                 <div className="flex flex-wrap gap-3 items-center mb-6">
                   {doc.processingTime && (
                     <div
                       className="flex items-center gap-1 uppercase"
-                      style={{ border: "1px solid #2a2d35", color: "#9ba0ab", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}
+                      style={{ border: "1px solid var(--spx-border)", color: "var(--spx-text-secondary)", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}
                     >
                       <Clock className="h-3 w-3" />
                       {doc.processingTime.toFixed(1)}s
@@ -861,7 +861,7 @@ export default function UploadPage() {
                   {doc.ocrEngine && (
                     <div
                       className="uppercase"
-                      style={{ border: "1px solid #2a2d35", color: "#9ba0ab", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}
+                      style={{ border: "1px solid var(--spx-border)", color: "var(--spx-text-secondary)", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}
                     >
                       Model: {doc.ocrEngine}
                     </div>
@@ -906,29 +906,29 @@ export default function UploadPage() {
 
                     {doc.extractedData.items && doc.extractedData.items.length > 0 && (
                       <div className="mb-6">
-                        <h4 className="mb-3 uppercase" style={{ fontSize: "11px", letterSpacing: "1.2px", color: "#6b6f78" }}>
+                        <h4 className="mb-3 uppercase" style={{ fontSize: "11px", letterSpacing: "1.2px", color: "var(--spx-muted)" }}>
                           Line Items
                         </h4>
-                        <div className="overflow-x-auto" style={{ border: "1px solid #2a2d35" }}>
+                        <div className="overflow-x-auto" style={{ border: "1px solid var(--spx-border)" }}>
                           <table className="w-full text-sm">
-                            <thead style={{ background: "#161920" }}>
+                            <thead style={{ background: "var(--spx-input-bg)" }}>
                               <tr>
-                                <th className="px-4 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>#</th>
-                                <th className="px-4 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Description</th>
-                                <th className="px-4 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>HSN</th>
-                                <th className="px-4 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Qty</th>
-                                <th className="px-4 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Rate</th>
-                                <th className="px-4 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Amount</th>
+                                <th className="px-4 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>#</th>
+                                <th className="px-4 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Description</th>
+                                <th className="px-4 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>HSN</th>
+                                <th className="px-4 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Qty</th>
+                                <th className="px-4 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Rate</th>
+                                <th className="px-4 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Amount</th>
                               </tr>
                             </thead>
                             <tbody>
                               {doc.extractedData.items.map((item: any, i: number) => (
-                                <tr key={i} style={{ borderTop: "1px solid #2a2d35" }}>
-                                  <td className="px-4 py-2" style={{ color: "#6b6f78" }}>{i + 1}</td>
+                                <tr key={i} style={{ borderTop: "1px solid var(--spx-border)" }}>
+                                  <td className="px-4 py-2" style={{ color: "var(--spx-muted)" }}>{i + 1}</td>
                                   <td className="px-4 py-2 text-white font-medium">{item.name || item.description || "-"}</td>
-                                  <td className="px-4 py-2" style={{ color: "#9ba0ab" }}>{item.hsn_code || "-"}</td>
-                                  <td className="px-4 py-2 text-right" style={{ color: "#9ba0ab" }}>{item.qty ?? "-"}</td>
-                                  <td className="px-4 py-2 text-right" style={{ color: "#9ba0ab" }}>{item.rate != null ? formatCurrency(item.rate) : "-"}</td>
+                                  <td className="px-4 py-2" style={{ color: "var(--spx-text-secondary)" }}>{item.hsn_code || "-"}</td>
+                                  <td className="px-4 py-2 text-right" style={{ color: "var(--spx-text-secondary)" }}>{item.qty ?? "-"}</td>
+                                  <td className="px-4 py-2 text-right" style={{ color: "var(--spx-text-secondary)" }}>{item.rate != null ? formatCurrency(item.rate) : "-"}</td>
                                   <td className="px-4 py-2 text-right text-white font-semibold">
                                     {item.price != null
                                       ? formatCurrency(item.price)
@@ -944,8 +944,8 @@ export default function UploadPage() {
                       </div>
                     )}
 
-                    <div className="pt-4" style={{ borderTop: "1px solid #2a2d35" }}>
-                      <h4 className="mb-3 uppercase" style={{ fontSize: "11px", letterSpacing: "1.2px", color: "#6b6f78" }}>
+                    <div className="pt-4" style={{ borderTop: "1px solid var(--spx-border)" }}>
+                      <h4 className="mb-3 uppercase" style={{ fontSize: "11px", letterSpacing: "1.2px", color: "var(--spx-muted)" }}>
                         Amounts &amp; Tax
                       </h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -960,14 +960,14 @@ export default function UploadPage() {
                     </div>
 
                     {doc.extractedData.amount_in_words && (
-                      <div className="mt-4 text-sm italic" style={{ color: "#6b6f78" }}>
+                      <div className="mt-4 text-sm italic" style={{ color: "var(--spx-muted)" }}>
                         Amount in words: {doc.extractedData.amount_in_words}
                       </div>
                     )}
                   </>
                   )
                 ) : (
-                  <div style={{ border: "1px dashed #2a2d35", background: "#12131a", padding: "20px", fontSize: "13px", color: "#6b6f78" }}>
+                  <div style={{ border: "1px dashed var(--spx-border)", background: "var(--spx-card)", padding: "20px", fontSize: "13px", color: "var(--spx-muted)" }}>
                     Extract this document to render editable fields.
                   </div>
                 )}
@@ -989,7 +989,7 @@ export default function UploadPage() {
 
       {pendingDuplicate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-md" style={{ background: "#12131a", border: "1px solid #2a2d35" }}>
+          <div className="w-full max-w-md" style={{ background: "var(--spx-card)", border: "1px solid var(--spx-border)" }}>
             <div className="p-6">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center" style={{ border: "1px solid #5c4517", color: "#fbbf24" }}>
@@ -997,24 +997,24 @@ export default function UploadPage() {
                 </div>
                 <div>
                   <h3 className="text-white" style={{ fontSize: "16px", fontWeight: 700 }}>Possible duplicate</h3>
-                  <p className="mt-1" style={{ fontSize: "13px", color: "#9ba0ab" }}>
+                  <p className="mt-1" style={{ fontSize: "13px", color: "var(--spx-text-secondary)" }}>
                     Same invoice number, vendor, and amount already exist for this client.
                     Saving again will create another voucher marked as duplicate.
                   </p>
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 p-4" style={{ borderTop: "1px solid #2a2d35" }}>
+            <div className="flex gap-3 p-4" style={{ borderTop: "1px solid var(--spx-border)" }}>
               <button
                 className="flex-1 uppercase"
-                style={{ border: "1px solid #2a2d35", color: "#ffffff", background: "transparent", padding: "10px", fontSize: "11px", letterSpacing: "1px" }}
+                style={{ border: "1px solid var(--spx-border)", color: "var(--spx-text)", background: "transparent", padding: "10px", fontSize: "11px", letterSpacing: "1px" }}
                 onClick={() => setPendingDuplicate(null)}
               >
                 Cancel
               </button>
               <button
                 className="flex-1 uppercase"
-                style={{ background: "#ffffff", color: "#0b0d10", padding: "10px", fontSize: "11px", letterSpacing: "1px", fontWeight: 600 }}
+                style={{ background: "var(--spx-text)", color: "var(--spx-canvas)", padding: "10px", fontSize: "11px", letterSpacing: "1px", fontWeight: 600 }}
                 onClick={confirmDuplicateSave}
               >
                 Save anyway
@@ -1043,7 +1043,7 @@ function LedgerReusePopup({
   const reason = VIA_LABEL[suggestion.via] || "matched from history";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}>
-      <div className="w-full max-w-md animate-in zoom-in-95" style={{ background: "#12131a", border: "1px solid #2a2d35" }}>
+      <div className="w-full max-w-md animate-in zoom-in-95" style={{ background: "var(--spx-card)", border: "1px solid var(--spx-border)" }}>
         <div className="p-6">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center" style={{ border: "1px solid #1e3a5f", color: "#7dd3fc" }}>
@@ -1051,12 +1051,12 @@ function LedgerReusePopup({
             </div>
             <div className="min-w-0">
               <h3 className="text-white" style={{ fontSize: "16px", fontWeight: 700 }}>Party seen before</h3>
-              <p className="mt-0.5 truncate" style={{ fontSize: "12px", color: "#6b6f78" }}>{fileName}</p>
+              <p className="mt-0.5 truncate" style={{ fontSize: "12px", color: "var(--spx-muted)" }}>{fileName}</p>
             </div>
           </div>
 
           <div className="mt-4 space-y-3 text-sm">
-            <p style={{ color: "#9ba0ab" }}>
+            <p style={{ color: "var(--spx-text-secondary)" }}>
               <span className="font-semibold text-white">{vendor}</span> looks like a party you&apos;ve
               already mapped ({reason}).
             </p>
@@ -1066,23 +1066,23 @@ function LedgerReusePopup({
                 {suggestion.ledgerName}
               </p>
             </div>
-            <p style={{ color: "#6b6f78" }}>
+            <p style={{ color: "var(--spx-muted)" }}>
               Reuse this ledger for consistency, or create a new one for this invoice.
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3 p-4" style={{ borderTop: "1px solid #2a2d35" }}>
+        <div className="flex gap-3 p-4" style={{ borderTop: "1px solid var(--spx-border)" }}>
           <button
             className="flex-1 inline-flex items-center justify-center uppercase"
-            style={{ border: "1px solid #2a2d35", color: "#ffffff", background: "transparent", padding: "10px", fontSize: "11px", letterSpacing: "1px" }}
+            style={{ border: "1px solid var(--spx-border)", color: "var(--spx-text)", background: "transparent", padding: "10px", fontSize: "11px", letterSpacing: "1px" }}
             onClick={onCreateNew}
           >
             <Plus className="mr-2 h-4 w-4" /> Create new
           </button>
           <button
             className="flex-1 inline-flex items-center justify-center uppercase"
-            style={{ background: "#ffffff", color: "#0b0d10", padding: "10px", fontSize: "11px", letterSpacing: "1px", fontWeight: 600 }}
+            style={{ background: "var(--spx-text)", color: "var(--spx-canvas)", padding: "10px", fontSize: "11px", letterSpacing: "1px", fontWeight: 600 }}
             onClick={onReuse}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" /> Use previous
@@ -1105,12 +1105,12 @@ function Field({
   if (value == null || value === "") return null;
   return (
     <div className="space-y-1">
-      <Label className="uppercase" style={{ fontSize: "10px", letterSpacing: "1px", color: "#6b6f78", fontWeight: 500 }}>{label}</Label>
+      <Label className="uppercase" style={{ fontSize: "10px", letterSpacing: "1px", color: "var(--spx-muted)", fontWeight: 500 }}>{label}</Label>
       <Input
         value={String(value)}
         onChange={(e) => onChange(e.target.value)}
         className="text-white"
-        style={{ background: "#0b0d10", border: "1px solid #2a2d35", borderRadius: 0 }}
+        style={{ background: "var(--spx-canvas)", border: "1px solid var(--spx-border)", borderRadius: 0 }}
       />
     </div>
   );
@@ -1133,12 +1133,12 @@ function AmountCard({
     <div
       className="p-3"
       style={{
-        border: highlight ? "1px solid #ffffff" : "1px solid #2a2d35",
-        background: highlight ? "#161920" : "#0f1115",
+        border: highlight ? "1px solid var(--spx-active-border)" : "1px solid var(--spx-border)",
+        background: highlight ? "var(--spx-input-bg)" : "var(--spx-card)",
       }}
     >
-      <p className="uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>{label}</p>
-      <p className={highlight ? "text-white" : ""} style={{ fontSize: "16px", fontWeight: 700, color: highlight ? "#ffffff" : "#e2e1eb" }}>
+      <p className="uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>{label}</p>
+      <p className={highlight ? "text-white" : ""} style={{ fontSize: "16px", fontWeight: 700, color: highlight ? "var(--spx-text)" : "#e2e1eb" }}>
         {display}
       </p>
     </div>
@@ -1154,46 +1154,46 @@ function BankSummary({ data }: { data: any }) {
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-4 text-sm">
-        <span className="uppercase" style={{ border: "1px solid #2a2d35", color: "#9ba0ab", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}>
+        <span className="uppercase" style={{ border: "1px solid var(--spx-border)", color: "var(--spx-text-secondary)", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}>
           Bank: {data?.bank_name || "—"}
         </span>
-        <span className="uppercase" style={{ border: "1px solid #2a2d35", color: "#9ba0ab", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}>
+        <span className="uppercase" style={{ border: "1px solid var(--spx-border)", color: "var(--spx-text-secondary)", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}>
           A/C: {data?.account_number || "—"}
         </span>
         <span className="uppercase font-medium" style={{ border: "1px solid #14532d", color: "#4ade80", padding: "5px 12px", fontSize: "10px", letterSpacing: "0.8px" }}>
           {txns.length} transactions
         </span>
       </div>
-      <div className="overflow-auto max-h-80" style={{ border: "1px solid #2a2d35" }}>
+      <div className="overflow-auto max-h-80" style={{ border: "1px solid var(--spx-border)" }}>
         <table className="w-full text-sm">
-          <thead className="sticky top-0" style={{ background: "#161920" }}>
+          <thead className="sticky top-0" style={{ background: "var(--spx-input-bg)" }}>
             <tr>
-              <th className="px-3 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Date</th>
-              <th className="px-3 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Description</th>
-              <th className="px-3 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Withdrawal</th>
-              <th className="px-3 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Deposit</th>
-              <th className="px-3 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "#6b6f78" }}>Balance</th>
+              <th className="px-3 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Date</th>
+              <th className="px-3 py-2 text-left uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Description</th>
+              <th className="px-3 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Withdrawal</th>
+              <th className="px-3 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Deposit</th>
+              <th className="px-3 py-2 text-right uppercase" style={{ fontSize: "10px", letterSpacing: "0.8px", color: "var(--spx-muted)" }}>Balance</th>
             </tr>
           </thead>
           <tbody>
             {txns.map((t, i) => (
-              <tr key={i} style={{ borderTop: "1px solid #2a2d35" }}>
-                <td className="px-3 py-2 whitespace-nowrap" style={{ color: "#9ba0ab" }}>{t.date || "—"}</td>
+              <tr key={i} style={{ borderTop: "1px solid var(--spx-border)" }}>
+                <td className="px-3 py-2 whitespace-nowrap" style={{ color: "var(--spx-text-secondary)" }}>{t.date || "—"}</td>
                 <td className="px-3 py-2 text-white">{t.description || "—"}</td>
                 <td className="px-3 py-2 text-right" style={{ color: "#f87171" }}>{fmt(t.withdrawal)}</td>
                 <td className="px-3 py-2 text-right" style={{ color: "#4ade80" }}>{fmt(t.deposit)}</td>
-                <td className="px-3 py-2 text-right" style={{ color: "#9ba0ab" }}>{fmt(t.balance)}</td>
+                <td className="px-3 py-2 text-right" style={{ color: "var(--spx-text-secondary)" }}>{fmt(t.balance)}</td>
               </tr>
             ))}
             {txns.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center" style={{ color: "#6b6f78" }}>No transactions detected.</td>
+                <td colSpan={5} className="px-3 py-6 text-center" style={{ color: "var(--spx-muted)" }}>No transactions detected.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      <p className="mt-2" style={{ fontSize: "11px", color: "#6b6f78" }}>
+      <p className="mt-2" style={{ fontSize: "11px", color: "var(--spx-muted)" }}>
         Click <strong className="text-white">Map Transactions</strong> to assign a ledger to each row and send to Tally.
       </p>
     </div>

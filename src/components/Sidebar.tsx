@@ -15,6 +15,7 @@ import {
   Link2,
   ClipboardList,
   Filter,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@clerk/nextjs";
@@ -53,8 +54,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     });
   };
 
+  const isSettingsActive = pathname === "/app-settings" || pathname.startsWith("/app-settings/");
+
   return (
-    <div className="flex flex-col h-full bg-[#0b0d10] text-white">
+    <div className="flex flex-col h-full" style={{ background: "var(--spx-canvas)", color: "var(--spx-text)" }}>
       {/* ── Brand ── */}
       <div className="px-5 pt-5 pb-0">
         <Link href="/dashboard" className="block">
@@ -65,19 +68,21 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               letterSpacing: "3px",
               lineHeight: "1.1",
               fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+              color: "var(--spx-text)",
             }}
           >
             RAO TECH
           </h1>
         </Link>
       </div>
-      <div className="px-5 pt-1 pb-4 border-b border-[#2a2d35]">
+      <div className="px-5 pt-1 pb-4" style={{ borderBottom: "1px solid var(--spx-border)" }}>
         <p
-          className="text-[#6b6f78] uppercase"
+          className="uppercase"
           style={{
             fontSize: "10px",
             letterSpacing: "2.4px",
             fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+            color: "var(--spx-muted)",
           }}
         >
           Operational Center
@@ -100,20 +105,29 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                 logNavClick(route.href, route.label);
                 onNavigate?.();
               }}
-              className={cn(
-                "group flex items-center gap-3 w-full cursor-pointer transition-all duration-150",
-                isActive
-                  ? "text-white bg-white/[0.08]"
-                  : "text-[#6b6f78] hover:text-white hover:bg-white/[0.03]"
-              )}
+              className="group flex items-center gap-3 w-full cursor-pointer transition-all duration-150"
               style={{
                 padding: "10px 16px",
-                borderLeft: isActive ? "3px solid #ffffff" : "3px solid transparent",
+                borderLeft: isActive ? `3px solid var(--spx-active-border)` : "3px solid transparent",
+                background: isActive ? "var(--spx-active-bg)" : "transparent",
+                color: isActive ? "var(--spx-text)" : "var(--spx-muted)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = "var(--spx-hover-bg)";
+                  e.currentTarget.style.color = "var(--spx-text)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "var(--spx-muted)";
+                }
               }}
             >
               <route.icon
-                className={cn("flex-shrink-0", isActive ? "text-white" : "text-[#6b6f78]")}
-                style={{ width: "18px", height: "18px" }}
+                className="flex-shrink-0"
+                style={{ width: "18px", height: "18px", color: "inherit" }}
                 strokeWidth={1.5}
               />
               <span
@@ -133,19 +147,74 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </nav>
 
       {/* ── Bottom: Settings + Logout ── */}
-      <div className="border-t border-[#2a2d35]">
+      <div style={{ borderTop: "1px solid var(--spx-border)" }}>
+        {/* Settings Link */}
+        <Link
+          href="/app-settings"
+          onClick={() => {
+            logNavClick("/app-settings", "Settings");
+            onNavigate?.();
+          }}
+          className="flex items-center gap-3 cursor-pointer transition-all duration-150"
+          style={{
+            padding: "12px 16px",
+            borderLeft: isSettingsActive ? `3px solid var(--spx-active-border)` : "3px solid transparent",
+            background: isSettingsActive ? "var(--spx-active-bg)" : "transparent",
+            color: isSettingsActive ? "var(--spx-text)" : "var(--spx-muted)",
+          }}
+          onMouseEnter={(e) => {
+            if (!isSettingsActive) {
+              e.currentTarget.style.background = "var(--spx-hover-bg)";
+              e.currentTarget.style.color = "var(--spx-text)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isSettingsActive) {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "var(--spx-muted)";
+            }
+          }}
+        >
+          <Settings
+            className="flex-shrink-0"
+            style={{ width: "18px", height: "18px", color: "inherit" }}
+            strokeWidth={1.5}
+          />
+          <span
+            className="uppercase"
+            style={{
+              fontSize: "12px",
+              letterSpacing: "1.5px",
+              fontWeight: 500,
+              fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
+            }}
+          >
+            Settings
+          </span>
+        </Link>
+
+        {/* Logout */}
         <SignOutButton>
           <div
-            className="flex items-center gap-3 text-[#6b6f78] hover:text-white hover:bg-white/[0.03] cursor-pointer transition-all duration-150"
+            className="flex items-center gap-3 cursor-pointer transition-all duration-150"
             style={{
               padding: "12px 16px",
               borderLeft: "3px solid transparent",
+              color: "var(--spx-muted)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--spx-hover-bg)";
+              e.currentTarget.style.color = "var(--spx-text)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "var(--spx-muted)";
             }}
             onClick={onNavigate}
           >
             <LogOut
               className="flex-shrink-0"
-              style={{ width: "18px", height: "18px" }}
+              style={{ width: "18px", height: "18px", color: "inherit" }}
               strokeWidth={1.5}
             />
             <span
