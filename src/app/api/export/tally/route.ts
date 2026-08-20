@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getActiveClient } from "@/lib/clientContext";
 import { buildTallyXml } from "@/lib/tally/exportXml";
+import { withRouteLogging } from "@/lib/trace";
 
 /**
  * POST /api/export/tally
  * Body: { voucherIds?: string[] } — if omitted, exports all APPROVED vouchers for active client.
  * Returns Tally XML download and marks vouchers EXPORTED_DEMO.
  */
-export async function POST(req: Request) {
+async function postTallyExport(req: Request) {
   try {
     const ctx = await getActiveClient();
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+async function listTallyExports() {
   try {
     const ctx = await getActiveClient();
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -115,3 +116,6 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to list exports" }, { status: 500 });
   }
 }
+
+export const POST = withRouteLogging("api:/export/tally", "POST", postTallyExport);
+export const GET = withRouteLogging("api:/export/tally", "GET", async () => listTallyExports());

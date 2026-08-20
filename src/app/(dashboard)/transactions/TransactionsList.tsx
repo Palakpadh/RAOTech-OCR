@@ -30,6 +30,15 @@ interface BankRow {
 
 const money = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 
+function trace(event: string, meta?: Record<string, unknown>) {
+  if (process.env.NEXT_PUBLIC_TRACE_LOGS === "0") return;
+  if (meta) {
+    console.log(`[trace][transactions-ui] ${event}`, meta);
+    return;
+  }
+  console.log(`[trace][transactions-ui] ${event}`);
+}
+
 function StatusChip({
   status,
   unmapped,
@@ -92,12 +101,18 @@ export default function TransactionsList({
 
   async function bulkApprove() {
     if (!selected.size) return;
+    const startedAt = performance.now();
+    trace("bulk-approve:start", { selectedCount: selected.size });
     setBusy(true);
     try {
       await fetch("/api/vouchers/bulk-approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ voucherIds: [...selected] }),
+      });
+      trace("bulk-approve:done", {
+        selectedCount: selected.size,
+        durationMs: Number((performance.now() - startedAt).toFixed(2)),
       });
       setSelected(new Set());
       router.refresh();
@@ -107,6 +122,8 @@ export default function TransactionsList({
   }
 
   async function exportTally(ids?: string[]) {
+    const startedAt = performance.now();
+    trace("export-tally:start", { selectedCount: ids?.length ?? 0 });
     setBusy(true);
     try {
       const res = await fetch("/api/export/tally", {
@@ -126,6 +143,10 @@ export default function TransactionsList({
       a.download = `tally_export_${new Date().toISOString().slice(0, 10)}.xml`;
       a.click();
       URL.revokeObjectURL(url);
+      trace("export-tally:done", {
+        selectedCount: ids?.length ?? 0,
+        durationMs: Number((performance.now() - startedAt).toFixed(2)),
+      });
       router.refresh();
     } finally {
       setBusy(false);
@@ -161,13 +182,19 @@ export default function TransactionsList({
 
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setTab("invoices")}
+          onClick={() => {
+            trace("tab:change", { from: tab, to: "invoices" });
+            setTab("invoices");
+          }}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === "invoices" ? "bg-gray-900 text-white" : "bg-white border text-gray-600"}`}
         >
           Invoices ({vouchers.length})
         </button>
         <button
-          onClick={() => setTab("bank")}
+          onClick={() => {
+            trace("tab:change", { from: tab, to: "bank" });
+            setTab("bank");
+          }}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === "bank" ? "bg-gray-900 text-white" : "bg-white border text-gray-600"}`}
         >
           Bank Statements ({statements.length})
@@ -177,7 +204,10 @@ export default function TransactionsList({
             {(["all", "ready", "low"] as const).map((f) => (
               <button
                 key={f}
-                onClick={() => setFilter(f)}
+                onClick={() => {
+                  trace("filter:change", { from: filter, to: f });
+                  setFilter(f);
+                }}
                 className={`px-3 py-2 rounded-lg text-xs font-medium ${filter === f ? "bg-blue-600 text-white" : "bg-white border text-gray-500"}`}
               >
                 {f === "all" ? "All" : f === "ready" ? "Ready" : "Needs attention"}

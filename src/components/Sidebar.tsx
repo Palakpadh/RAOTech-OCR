@@ -43,6 +43,16 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const showExtraPages = extraPagesEnabled();
   const visibleRoutes = routes.filter((route) => showExtraPages || !route.localOnly);
 
+  const logNavClick = (href: string, label: string) => {
+    if (process.env.NEXT_PUBLIC_TRACE_LOGS === "0") return;
+    console.log("[trace][sidebar] nav:click", {
+      from: pathname,
+      to: href,
+      label,
+      at: new Date().toISOString(),
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0b0d10] text-white">
       {/* ── Brand ── */}
@@ -86,7 +96,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             <Link
               key={route.href}
               href={route.href}
-              onClick={onNavigate}
+              onClick={() => {
+                logNavClick(route.href, route.label);
+                onNavigate?.();
+              }}
               className={cn(
                 "group flex items-center gap-3 w-full cursor-pointer transition-all duration-150",
                 isActive

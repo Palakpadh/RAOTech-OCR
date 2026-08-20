@@ -9,7 +9,7 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
  * page load is the number worth watching — a page that suddenly issues ten
  * queries instead of two has regressed by ~2 seconds.
  */
-const LOG_QUERIES = process.env.PRISMA_LOG_QUERIES === "1";
+const LOG_QUERIES = process.env.PRISMA_LOG_QUERIES !== "0";
 
 function createClient() {
   if (!LOG_QUERIES) return new PrismaClient();
@@ -21,8 +21,9 @@ function createClient() {
   client.$on("query", (e) => {
     count += 1;
     totalMs += e.duration;
-    const q = e.query.replace(/\s+/g, " ").slice(0, 100);
-    console.log(`[prisma] #${count} ${e.duration}ms (Σ ${totalMs}ms) ${q}`);
+    const q = e.query.replace(/\s+/g, " ").slice(0, 240);
+    const params = e.params.length > 180 ? `${e.params.slice(0, 180)}...` : e.params;
+    console.log(`[trace][prisma] #${count} ${e.duration}ms (Σ ${totalMs}ms) ${q} params=${params}`);
   });
 
   return client;

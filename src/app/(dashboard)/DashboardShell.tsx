@@ -8,11 +8,26 @@ import { Sidebar } from "@/components/Sidebar";
 import { ClientSwitcher } from "@/components/ClientSwitcher";
 import { CommandPalette } from "@/components/CommandPalette";
 
+declare global {
+  interface Window {
+    __raotechRouteChangeStart?: number;
+  }
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_TRACE_LOGS !== "0") {
+      const now = performance.now();
+      const started = window.__raotechRouteChangeStart;
+      console.log("[trace][dashboard-shell] pathname:changed", {
+        pathname,
+        durationFromStartMs: started ? Number((now - started).toFixed(2)) : null,
+      });
+      window.__raotechRouteChangeStart = now;
+    }
     setMobileMenuOpen(false);
   }, [pathname]);
 

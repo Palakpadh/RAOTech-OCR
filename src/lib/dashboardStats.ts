@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { traceAsync } from "@/lib/trace";
 
 /**
  * The dashboard's headline numbers, fetched in a single round trip.
@@ -45,7 +46,7 @@ export async function getDashboardData(
   userId: string,
   clientId: string
 ): Promise<RawResult> {
-  const [result] = await prisma.$queryRaw<RawResult[]>`
+  const [result] = await traceAsync("dashboardStats", "query", () => prisma.$queryRaw<RawResult[]>`
     SELECT
       row_to_json(s) AS stats,
       (SELECT COALESCE(json_agg(r), '[]'::json) FROM (
@@ -106,7 +107,7 @@ export async function getDashboardData(
           WHERE "userId" = ${userId} AND "clientId" = ${clientId}
           ORDER BY "createdAt" DESC LIMIT 1) AS "reconMismatched"
     ) s
-  `;
+  `, { userId, clientId });
 
   return result;
 }

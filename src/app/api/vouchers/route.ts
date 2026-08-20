@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getActiveClient } from "@/lib/clientContext";
 import { createDraftVoucherForInvoice } from "@/lib/accounting/createVoucher";
 import type { VoucherType } from "@/lib/accounting/types";
+import { withRouteLogging } from "@/lib/trace";
 
-export async function GET(req: Request) {
+async function getVouchers(req: Request) {
   try {
     const ctx = await getActiveClient();
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+async function postVoucher(req: Request) {
   try {
     const ctx = await getActiveClient();
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -65,3 +66,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to create voucher" }, { status: 500 });
   }
 }
+
+export const GET = withRouteLogging("api:/vouchers", "GET", getVouchers);
+export const POST = withRouteLogging("api:/vouchers", "POST", postVoucher);

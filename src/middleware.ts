@@ -5,6 +5,7 @@ import {
   LOCAL_ONLY_ROUTE_PREFIXES,
   extraPagesEnabled,
 } from "@/lib/featureFlags";
+import { trace } from "@/lib/trace";
 
 // Define routes that are public (do not require login)
 const isPublicRoute = createRouteMatcher([
@@ -16,26 +17,50 @@ const isPublicRoute = createRouteMatcher([
 
 // Note: The function is now 'async' and we use 'await auth.protect()'
 export default clerkMiddleware(async (auth, req) => {
+  const startedAt = Date.now();
   const pathname = req.nextUrl.pathname;
+  trace("middleware", "request:start", {
+    method: req.method,
+    pathname,
+  });
+
   const allowExtraPages = extraPagesEnabled();
   if (!allowExtraPages) {
     const blockedApi = LOCAL_ONLY_API_PREFIXES.some(
       (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
     );
     if (blockedApi) {
+      trace("middleware", "request:blocked-api", {
+        pathname,
+        durationMs: Date.now() - startedAt,
+      });
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const blockedPage = LOCAL_ONLY_ROUTE_PREFIXES.some(
       (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
     );
     if (blockedPage) {
+      trace("middleware", "request:blocked-page-redirect", {
+        pathname,
+        durationMs: Date.now() - startedAt,
+      });
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
 
   if (!isPublicRoute(req)) {
+    const protectStartedAt = Date.now();
     await auth.protect();
+    trace("middleware", "request:auth-protected", {
+      pathname,
+      durationMs: Date.now() - protectStartedAt,
+    });
   }
+
+  trace("middleware", "request:pass", {
+    pathname,
+    durationMs: Date.now() - startedAt,
+  });
 });
 
 export const config = {

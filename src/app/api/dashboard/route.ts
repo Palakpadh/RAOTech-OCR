@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { withRouteLogging } from "@/lib/trace";
 
-export async function GET() {
+async function getDashboard() {
   try {
     const user = await currentUser();
     if (!user) {
@@ -75,3 +76,5 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to load dashboard" }, { status: 500 });
   }
 }
+
+export const GET = withRouteLogging("api:/dashboard", "GET", async () => getDashboard());

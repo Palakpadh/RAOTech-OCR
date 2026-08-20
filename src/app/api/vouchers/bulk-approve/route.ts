@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getActiveClient } from "@/lib/clientContext";
 import { rememberMapping } from "@/lib/accounting/rememberMapping";
 import { normGstin } from "@/lib/accounting/normalize";
+import { withRouteLogging } from "@/lib/trace";
 
-export async function POST(req: Request) {
+async function bulkApprove(req: Request) {
   try {
     const ctx = await getActiveClient();
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -59,3 +60,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to bulk approve" }, { status: 500 });
   }
 }
+
+export const POST = withRouteLogging("api:/vouchers/bulk-approve", "POST", bulkApprove);

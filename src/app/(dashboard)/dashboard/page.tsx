@@ -14,15 +14,17 @@ import { redirect } from "next/navigation";
 import { getActiveClient } from "@/lib/clientContext";
 import { getDashboardData } from "@/lib/dashboardStats";
 import { extraPagesEnabled } from "@/lib/featureFlags";
+import { traceAsync } from "@/lib/trace";
 
 export default async function Dashboard() {
-  const ctx = await getActiveClient();
-  if (!ctx) return redirect("/sign-in");
-  const { user, client } = ctx;
-  const showExtraPages = extraPagesEnabled();
+  return traceAsync("page:/dashboard", "render", async () => {
+    const ctx = await getActiveClient();
+    if (!ctx) return redirect("/sign-in");
+    const { user, client } = ctx;
+    const showExtraPages = extraPagesEnabled();
 
 
-  const { stats, rows } = await getDashboardData(user.id, client.id);
+    const { stats, rows } = await getDashboardData(user.id, client.id);
 
   const {
     invoiceCount,
@@ -56,8 +58,8 @@ export default async function Dashboard() {
     confidence: v.avgConfidence,
   }));
 
-  return (
-    <div className="p-4 md:p-6 lg:p-7" style={{ maxWidth: "1400px" }}>
+    return (
+      <div className="p-4 md:p-6 lg:p-7" style={{ maxWidth: "1400px" }}>
       {/* ── Header Row ── */}
       <div
         className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -450,8 +452,9 @@ export default async function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
-  );
+      </div>
+    );
+  });
 }
 
 /* ── StatCard: Boxy, sharp corners, large number, matching reference exactly ── */
