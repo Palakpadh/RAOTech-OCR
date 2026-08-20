@@ -3,7 +3,7 @@ type TraceMeta = Record<string, unknown>;
 const SERVER_TRACE_ENABLED = process.env.TRACE_LOGS !== "0";
 
 function nowMs() {
-  return Number(process.hrtime.bigint()) / 1_000_000;
+  return performance.now();
 }
 
 function toErrorMeta(error: unknown) {
