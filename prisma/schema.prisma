@@ -140,6 +140,7 @@ model Invoice {
   updatedAt      DateTime @updatedAt
 
   @@index([userId, clientId])
+  @@index([userId, clientId, createdAt])
   @@index([clientId, invoiceNumber, vendorGstin])
   @@index([clientId, status])
 }
@@ -244,6 +245,7 @@ model Voucher {
   updatedAt DateTime @updatedAt
 
   @@index([userId, clientId, status])
+  @@index([userId, clientId, createdAt])
   @@index([userId, clientId, voucherType, date])
 }
 
@@ -289,6 +291,7 @@ model BankStatement {
   updatedAt DateTime @updatedAt
 
   @@index([userId, clientId, status])
+  @@index([userId, clientId, createdAt])
 }
 
 model BankTxn {

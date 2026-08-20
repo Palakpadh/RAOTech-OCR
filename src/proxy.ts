@@ -15,11 +15,10 @@ const isPublicRoute = createRouteMatcher([
   "/intake(.*)",
 ]);
 
-// Note: The function is now 'async' and we use 'await auth.protect()'
 export default clerkMiddleware(async (auth, req) => {
   const startedAt = Date.now();
   const pathname = req.nextUrl.pathname;
-  trace("middleware", "request:start", {
+  trace("proxy", "request:start", {
     method: req.method,
     pathname,
   });
@@ -30,7 +29,7 @@ export default clerkMiddleware(async (auth, req) => {
       (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
     );
     if (blockedApi) {
-      trace("middleware", "request:blocked-api", {
+      trace("proxy", "request:blocked-api", {
         pathname,
         durationMs: Date.now() - startedAt,
       });
@@ -40,7 +39,7 @@ export default clerkMiddleware(async (auth, req) => {
       (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
     );
     if (blockedPage) {
-      trace("middleware", "request:blocked-page-redirect", {
+      trace("proxy", "request:blocked-page-redirect", {
         pathname,
         durationMs: Date.now() - startedAt,
       });
@@ -51,13 +50,13 @@ export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
     const protectStartedAt = Date.now();
     await auth.protect();
-    trace("middleware", "request:auth-protected", {
+    trace("proxy", "request:auth-protected", {
       pathname,
       durationMs: Date.now() - protectStartedAt,
     });
   }
 
-  trace("middleware", "request:pass", {
+  trace("proxy", "request:pass", {
     pathname,
     durationMs: Date.now() - startedAt,
   });

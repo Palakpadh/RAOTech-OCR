@@ -13,14 +13,28 @@ type Client = {
   isDefault: boolean;
 };
 
-export function ClientSwitcher() {
+type ClientSwitcherProps = {
+  initialClients?: Client[];
+  initialActiveId?: string | null;
+};
+
+export function ClientSwitcher({ initialClients, initialActiveId }: ClientSwitcherProps = {}) {
   const router = useRouter();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [clients, setClients] = useState<Client[]>(initialClients || []);
+  const [activeId, setActiveId] = useState<string | null>(initialActiveId ?? null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (initialClients && initialClients.length > 0) {
+      setClients(initialClients);
+    }
+    if (initialActiveId) {
+      setActiveId(initialActiveId);
+    }
+  }, [initialClients, initialActiveId]);
 
   async function load() {
     const res = await fetch("/api/clients");
@@ -31,7 +45,9 @@ export function ClientSwitcher() {
   }
 
   useEffect(() => {
-    load();
+    if (!initialClients || initialClients.length === 0) {
+      load();
+    }
   }, []);
 
   const active = clients.find((c) => c.id === activeId) || clients[0];

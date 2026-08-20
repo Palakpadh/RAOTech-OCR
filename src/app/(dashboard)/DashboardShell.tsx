@@ -14,7 +14,20 @@ declare global {
   }
 }
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+type ClientItem = {
+  id: string;
+  name: string;
+  gstin: string | null;
+  isDefault: boolean;
+};
+
+type DashboardShellProps = {
+  children: React.ReactNode;
+  initialClients?: ClientItem[];
+  initialActiveId?: string | null;
+};
+
+export function DashboardShell({ children, initialClients, initialActiveId }: DashboardShellProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -175,7 +188,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <span>Tally: Live Sync</span>
             </div>
 
-            <ClientSwitcher />
+            <ClientSwitcher initialClients={initialClients} initialActiveId={initialActiveId} />
           </div>
         </div>
 
