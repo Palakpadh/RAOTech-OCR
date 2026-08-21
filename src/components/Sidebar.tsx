@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   UploadCloud,
   MessageSquare,
+  MessagesSquare,
   LogOut,
   BookOpen,
   ListChecks,
@@ -33,6 +34,7 @@ const routes = [
   { label: "Intake Links", icon: Link2, href: "/intake", color: "text-pink-400", localOnly: true },
   { label: "Tasks", icon: ClipboardList, href: "/tasks", color: "text-lime-400", localOnly: true },
   { label: "AI Assistant", icon: MessageSquare, href: "/chat", color: "text-pink-700" },
+  { label: "Communication", icon: MessagesSquare, href: "/communication", color: "text-teal-400" },
 ];
 
 type SidebarProps = {
@@ -57,7 +59,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const isSettingsActive = pathname === "/app-settings" || pathname.startsWith("/app-settings/");
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "var(--spx-canvas)", color: "var(--spx-text)" }}>
+    <div className="flex flex-col h-full" style={{ background: "var(--spx-sidebar-bg)", color: "var(--spx-sidebar-text)" }}>
       {/* ── Brand ── */}
       <div className="px-5 pt-5 pb-0">
         <Link href="/dashboard" className="block">
@@ -68,21 +70,21 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               letterSpacing: "3px",
               lineHeight: "1.1",
               fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
-              color: "var(--spx-text)",
+              color: "var(--spx-sidebar-text)",
             }}
           >
             RAO TECH
           </h1>
         </Link>
       </div>
-      <div className="px-5 pt-1 pb-4" style={{ borderBottom: "1px solid var(--spx-border)" }}>
+      <div className="px-5 pt-1 pb-4" style={{ borderBottom: "1px solid var(--spx-sidebar-border)" }}>
         <p
           className="uppercase"
           style={{
             fontSize: "10px",
             letterSpacing: "2.4px",
             fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
-            color: "var(--spx-muted)",
+            color: "var(--spx-sidebar-muted)",
           }}
         >
           Operational Center
@@ -108,20 +110,20 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               className="group flex items-center gap-3 w-full cursor-pointer transition-all duration-150"
               style={{
                 padding: "10px 16px",
-                borderLeft: isActive ? `3px solid var(--spx-active-border)` : "3px solid transparent",
-                background: isActive ? "var(--spx-active-bg)" : "transparent",
-                color: isActive ? "var(--spx-text)" : "var(--spx-muted)",
+                borderLeft: isActive ? `3px solid var(--spx-sidebar-active-border)` : "3px solid transparent",
+                background: isActive ? "var(--spx-sidebar-active-bg)" : "transparent",
+                color: isActive ? "var(--spx-sidebar-text)" : "var(--spx-sidebar-muted)",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.background = "var(--spx-hover-bg)";
-                  e.currentTarget.style.color = "var(--spx-text)";
+                  e.currentTarget.style.background = "var(--spx-sidebar-hover-bg)";
+                  e.currentTarget.style.color = "var(--spx-sidebar-text)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
                   e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "var(--spx-muted)";
+                  e.currentTarget.style.color = "var(--spx-sidebar-muted)";
                 }
               }}
             >
@@ -147,7 +149,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </nav>
 
       {/* ── Bottom: Settings + Logout ── */}
-      <div style={{ borderTop: "1px solid var(--spx-border)" }}>
+      <div style={{ borderTop: "1px solid var(--spx-sidebar-border)" }}>
         {/* Settings Link */}
         <Link
           href="/app-settings"
@@ -158,20 +160,20 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           className="flex items-center gap-3 cursor-pointer transition-all duration-150"
           style={{
             padding: "12px 16px",
-            borderLeft: isSettingsActive ? `3px solid var(--spx-active-border)` : "3px solid transparent",
-            background: isSettingsActive ? "var(--spx-active-bg)" : "transparent",
-            color: isSettingsActive ? "var(--spx-text)" : "var(--spx-muted)",
+            borderLeft: isSettingsActive ? `3px solid var(--spx-sidebar-active-border)` : "3px solid transparent",
+            background: isSettingsActive ? "var(--spx-sidebar-active-bg)" : "transparent",
+            color: isSettingsActive ? "var(--spx-sidebar-text)" : "var(--spx-sidebar-muted)",
           }}
           onMouseEnter={(e) => {
             if (!isSettingsActive) {
-              e.currentTarget.style.background = "var(--spx-hover-bg)";
-              e.currentTarget.style.color = "var(--spx-text)";
+              e.currentTarget.style.background = "var(--spx-sidebar-hover-bg)";
+              e.currentTarget.style.color = "var(--spx-sidebar-text)";
             }
           }}
           onMouseLeave={(e) => {
             if (!isSettingsActive) {
               e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "var(--spx-muted)";
+              e.currentTarget.style.color = "var(--spx-sidebar-muted)";
             }
           }}
         >
@@ -200,15 +202,15 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             style={{
               padding: "12px 16px",
               borderLeft: "3px solid transparent",
-              color: "var(--spx-muted)",
+              color: "var(--spx-sidebar-muted)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--spx-hover-bg)";
-              e.currentTarget.style.color = "var(--spx-text)";
+              e.currentTarget.style.background = "var(--spx-sidebar-hover-bg)";
+              e.currentTarget.style.color = "var(--spx-sidebar-text)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "var(--spx-muted)";
+              e.currentTarget.style.color = "var(--spx-sidebar-muted)";
             }}
             onClick={onNavigate}
           >

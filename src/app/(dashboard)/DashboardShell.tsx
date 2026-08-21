@@ -58,7 +58,7 @@ export function DashboardShell({ children, initialClients, initialActiveId }: Da
       {/* Desktop Sidebar */}
       <div
         className="hidden h-full md:flex md:flex-col md:fixed md:inset-y-0 z-[80]"
-        style={{ width: "232px", borderRight: "1px solid var(--spx-border)" }}
+        style={{ width: "232px", borderRight: "1px solid var(--spx-border)", boxShadow: "var(--spx-sidebar-shadow)" }}
       >
         <Sidebar />
       </div>
@@ -128,6 +128,7 @@ export function DashboardShell({ children, initialClients, initialActiveId }: Da
             gap: "12px",
             borderBottom: "1px solid var(--spx-border)",
             background: "var(--spx-topbar-bg)",
+            boxShadow: "var(--spx-topbar-shadow)",
             padding: "10px 24px",
           }}
         >
