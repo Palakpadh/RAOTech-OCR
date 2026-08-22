@@ -305,7 +305,7 @@ export default function TransactionsList({
                 selected.size ? [...selected] : undefined
               )
             }
-            className="bg-[#0b6b3a] hover:bg-[#0a5c32] text-[var(--spx-text)]"
+            className="bg-green-600 hover:bg-green-500 text-white"
           >
             <Download className="mr-2 h-4 w-4" />
             Export Tally XML
@@ -366,7 +366,7 @@ export default function TransactionsList({
                 }}
                 className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
                   filter === f
-                    ? "bg-zinc-800 text-[var(--spx-text)] border-zinc-700"
+                    ? "bg-gray-300 text-gray-900 border-gray-400"
                     : "bg-[var(--spx-input-bg)] text-[var(--spx-muted)] border-[var(--spx-border)] hover:text-[var(--spx-text)]"
                 }`}
               >

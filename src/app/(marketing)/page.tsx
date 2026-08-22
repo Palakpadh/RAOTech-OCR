@@ -10,10 +10,15 @@ import {
   FileStack,
   MessageSquareText,
   FileSpreadsheet,
+  Users,
   Volume2,
   VolumeX,
   ChevronDown,
   Play,
+  Clock,
+  CheckCircle2,
+  Zap,
+  ShieldCheck,
 } from "lucide-react";
 
 function useReveal<T extends HTMLElement>() {
@@ -143,6 +148,46 @@ const PILLARS = [
       "Match your purchase register against GSTR-2B, resolve the gaps, then export approved vouchers as Tally XML.",
     href: "/gst",
     cta: "Reconcile GST",
+  },
+  {
+    icon: Users,
+    eyebrow: "Client & Team Communication",
+    title: "Communication Hub",
+    description:
+      "Message clients and your team in one place — threads, groups, and shared context, without leaving the workspace.",
+    href: "/communication",
+    cta: "Open communication hub",
+  },
+];
+
+const RESULTS = [
+  {
+    icon: Clock,
+    value: "80%",
+    label: "Time saved",
+    detail:
+      "Less manual data entry across intake, reconciliation, and voucher review.",
+  },
+  {
+    icon: CheckCircle2,
+    value: "100%",
+    label: "Accuracy",
+    detail:
+      "Every extracted line item is verified before it reaches Tally.",
+  },
+  {
+    icon: Zap,
+    value: "5x",
+    label: "Faster reconciliation",
+    detail:
+      "GST matching that used to take days now clears in hours.",
+  },
+  {
+    icon: ShieldCheck,
+    value: "0",
+    label: "Duplicate entries",
+    detail:
+      "Ledger mapping rules catch repeats before they're synced.",
   },
 ];
 
@@ -281,7 +326,7 @@ export default function LandingPage() {
           <div className="ml-auto">
             <Link href="/dashboard">
               <Button className="rounded-none bg-primary text-primary-foreground hover:bg-primary/90">
-                Get started
+                Login / Register
               </Button>
             </Link>
           </div>
@@ -372,7 +417,7 @@ export default function LandingPage() {
             <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {heroDate} — Built for Indian CAs &amp; tax teams
+                  {heroDate} — Built for Indian CA&apos;s &amp; tax teams
                 </p>
 
                 <h1 className="mt-4 max-w-4xl text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl lg:text-7xl">
@@ -516,11 +561,11 @@ export default function LandingPage() {
               </p>
 
               <h2 className="mt-2 max-w-xl text-2xl font-bold uppercase tracking-tight md:text-4xl">
-                Three tools, one workspace
+                Four tools, one workspace
               </h2>
             </Reveal>
 
-            <div className="mt-10 grid overflow-hidden border border-border bg-border md:grid-cols-3">
+            <div className="mt-10 grid overflow-hidden border border-border bg-border md:grid-cols-2 lg:grid-cols-4">
               {PILLARS.map(
                 (
                   {
@@ -566,6 +611,49 @@ export default function LandingPage() {
                   </Reveal>
                 )
               )}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="results"
+          className="scroll-mt-14 border-b border-border py-20 md:py-28"
+        >
+          <div className="mx-auto max-w-6xl px-4 md:px-6">
+            <Reveal>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Results
+              </p>
+
+              <h2 className="mt-2 max-w-xl text-2xl font-bold uppercase tracking-tight md:text-4xl">
+                Real-world, proven results
+              </h2>
+            </Reveal>
+
+            <div className="mt-10 grid overflow-hidden border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+              {RESULTS.map(({ icon: Icon, value, label, detail }, i) => (
+                <Reveal
+                  key={label}
+                  delay={i * 100}
+                  className="bg-background p-6 md:p-8"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center border border-border bg-accent/40">
+                    <Icon className="h-5 w-5" />
+                  </div>
+
+                  <p className="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">
+                    {value}
+                  </p>
+
+                  <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                    {label}
+                  </p>
+
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                    {detail}
+                  </p>
+                </Reveal>
+              ))}
             </div>
           </div>
         </section>
