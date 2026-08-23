@@ -194,7 +194,7 @@ const RESULTS = [
 const FAQS = [
   {
     q: "What is RAO AI?",
-    a: "RAO AI is an automation layer for CA firms and accounting teams — it reads your invoices, reconciles GST, and keeps Tally in sync, so the manual data-entry work disappears.",
+    a: "RAO AI is an automation layer for CA firms and accounting teams it reads your invoices, reconciles GST, and keeps Tally in sync, so the manual data-entry work disappears.",
   },
   {
     q: "What files can I upload?",
