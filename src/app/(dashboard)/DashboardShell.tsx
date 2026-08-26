@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { ClientSwitcher } from "@/components/ClientSwitcher";
 import { CommandPalette } from "@/components/CommandPalette";
+import { ConnectorStatusBanner } from "@/components/ConnectorStatusBanner";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -71,6 +72,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
           <ClientSwitcher />
         </div>
+        {/* A queued push does not move while the desktop agent is down, and no
+            screen can make it move — so the warning lives above all of them. */}
+        <ConnectorStatusBanner />
         {children}
       </main>
 

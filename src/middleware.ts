@@ -14,6 +14,24 @@ const isPublicRoute = createRouteMatcher([
   "/intake(.*)",
 ]);
 
+/**
+ * The desktop connector's own endpoints. They authenticate with
+ * `Authorization: Bearer rtc_…` against ConnectorDevice.tokenHash, not with a
+ * Clerk session — the binary on the accountant's machine never holds a login,
+ * which is what lets a device be revoked without disturbing the user's account.
+ * Left inside Clerk's session requirement they would answer a redirect to the
+ * sign-in page, which a Go agent reads as an unparseable 200.
+ *
+ * /api/connector/devices/* is deliberately absent: that is the web UI managing
+ * its own devices and stays behind Clerk.
+ */
+const isConnectorRoute = createRouteMatcher([
+  "/api/connector/pair",
+  "/api/connector/heartbeat",
+  "/api/connector/jobs",
+  "/api/connector/jobs/(.*)",
+]);
+
 // Note: The function is now 'async' and we use 'await auth.protect()'
 export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
@@ -33,7 +51,7 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
-  if (!isPublicRoute(req)) {
+  if (!isPublicRoute(req) && !isConnectorRoute(req)) {
     await auth.protect();
   }
 });

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LedgerSelect, type LedgerOption } from "@/components/LedgerSelect";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, PlugZap } from "lucide-react";
 
 interface Ledger extends LedgerOption {
   group: string;
@@ -67,13 +68,21 @@ export default function LedgerRuleManager({
             {clientName ? `${clientName} · ` : ""}Chart of accounts and auto-mapping rules
           </p>
         </div>
-        {mappingAccuracy != null && (
-          <div className="rounded-xl border bg-emerald-50 border-emerald-100 px-4 py-2 text-sm">
-            <div className="text-xs text-emerald-600 uppercase font-semibold">Mapping accuracy</div>
-            <div className="text-xl font-bold text-emerald-800">{mappingAccuracy}%</div>
-            <div className="text-xs text-emerald-700">auto-mapped lines this client</div>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/settings/tally"
+            className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <PlugZap className="h-4 w-4 text-emerald-600" /> Tally Connection
+          </Link>
+          {mappingAccuracy != null && (
+            <div className="rounded-xl border bg-emerald-50 border-emerald-100 px-4 py-2 text-sm">
+              <div className="text-xs text-emerald-600 uppercase font-semibold">Mapping accuracy</div>
+              <div className="text-xl font-bold text-emerald-800">{mappingAccuracy}%</div>
+              <div className="text-xs text-emerald-700">auto-mapped lines this client</div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2">

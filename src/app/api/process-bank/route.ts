@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8001";
+import { backendFetch } from "@/lib/backend";
 
 // Proxy a bank statement file to the FastAPI /extract-bank endpoint
 export async function POST(req: Request) {
@@ -12,7 +11,7 @@ export async function POST(req: Request) {
     const backendForm = new FormData();
     backendForm.append("file", file);
 
-    const response = await fetch(`${BACKEND_URL}/extract-bank`, {
+    const response = await backendFetch("/extract-bank", {
       method: "POST",
       body: backendForm,
     });

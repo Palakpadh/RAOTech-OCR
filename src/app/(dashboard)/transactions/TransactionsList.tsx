@@ -1,10 +1,34 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, Landmark, ArrowRight, CheckSquare, Download, Loader2 } from "lucide-react";
+import {
+  FileText,
+  Landmark,
+  ArrowRight,
+  CheckSquare,
+  Download,
+  Loader2,
+  AlertTriangle,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/Toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { TallySyncBadge } from "@/components/TallySyncBadge";
+import { TallySyncOverlay } from "@/components/TallySyncOverlay";
+import { useTallyPush, useVoucherSyncs } from "@/components/tallyClient";
+
+/** Mirrors PreflightIssue in src/lib/tally/preflight.ts. */
+interface ExportIssue {
+  voucherId: string;
+  code: string;
+  severity: "error" | "warning";
+  message: string;
+}
 
 interface VoucherRow {
   id: string;
@@ -68,13 +92,45 @@ export default function TransactionsList({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<"all" | "ready" | "low">("all");
+  const [hideSynced, setHideSynced] = useState(false);
+  const [failedOnly, setFailedOnly] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
+  const { toast } = useToast();
+  // Populated when the server refuses an export because Tally would reject it.
+  const [blocked, setBlocked] = useState<ExportIssue[] | null>(null);
+
+  const voucherIds = useMemo(() => vouchers.map((v) => v.id), [vouchers]);
+  const { syncs, refresh: refreshSyncs } = useVoucherSyncs(voucherIds);
+
+  // A push settling changes both the sync rows and Voucher.status, so refresh
+  // the server component too rather than letting the table drift from Tally.
+  const onSettled = useCallback(() => {
+    void refreshSyncs();
+    router.refresh();
+  }, [refreshSyncs, router]);
+  const push = useTallyPush({ onSettled });
+
+  const labels = useMemo(
+    () => Object.fromEntries(vouchers.map((v) => [v.id, `${v.vendor} · ${v.invoiceNumber}`])),
+    [vouchers]
+  );
 
   const filtered = useMemo(() => {
-    if (filter === "ready") return vouchers.filter((v) => !v.hasUnmapped && v.status === "DRAFT");
+    let rows = vouchers;
+    if (filter === "ready") rows = rows.filter((v) => !v.hasUnmapped && v.status === "DRAFT");
     if (filter === "low")
-      return vouchers.filter((v) => v.hasUnmapped || (v.confidence != null && v.confidence < 0.7));
-    return vouchers;
-  }, [vouchers, filter]);
+      rows = rows.filter((v) => v.hasUnmapped || (v.confidence != null && v.confidence < 0.7));
+    if (hideSynced)
+      rows = rows.filter((v) => syncs[v.id]?.state !== "POSTED" && v.status !== "POSTED");
+    if (failedOnly) rows = rows.filter((v) => syncs[v.id]?.state === "FAILED");
+    return rows;
+  }, [vouchers, filter, hideSynced, failedOnly, syncs]);
+
+  /** Only a voucher Tally has actually accepted can be removed from its books. */
+  const deletable = useMemo(
+    () => [...selected].filter((id) => syncs[id]?.state === "POSTED"),
+    [selected, syncs]
+  );
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -108,17 +164,37 @@ export default function TransactionsList({
 
   async function exportTally(ids?: string[]) {
     setBusy(true);
+    setBlocked(null);
     try {
       const res = await fetch("/api/export/tally", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ids?.length ? { voucherIds: ids } : {}),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        alert(err.error || "Export failed");
+
+      // 422 means preflight caught something Tally would reject. Show exactly
+      // what and on which voucher, rather than a generic failure — the whole
+      // point is to save the user a trip through Tally.imp.
+      if (res.status === 422) {
+        const body = await res.json().catch(() => ({}));
+        const issues: ExportIssue[] = [
+          ...(body.issues ?? []),
+          ...(body.warnings ?? []),
+        ];
+        setBlocked(issues.length ? issues : [
+          { voucherId: "", code: "UNKNOWN", severity: "error", message: body.error || "Export blocked." },
+        ]);
         return;
       }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || "Export failed", "error");
+        return;
+      }
+
+      const warnings = Number(res.headers.get("X-Export-Warnings") || 0);
+      const count = Number(res.headers.get("X-Export-Count") || 0);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -126,6 +202,12 @@ export default function TransactionsList({
       a.download = `tally_export_${new Date().toISOString().slice(0, 10)}.xml`;
       a.click();
       URL.revokeObjectURL(url);
+      toast(
+        warnings
+          ? `Exported ${count} voucher(s) with ${warnings} warning(s) — check ledger names in Tally.`
+          : `Exported ${count} voucher(s). Import the file in Tally.`,
+        warnings ? "info" : "success"
+      );
       router.refresh();
     } finally {
       setBusy(false);
@@ -137,27 +219,106 @@ export default function TransactionsList({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-          <p className="text-gray-500 text-sm mt-1">Map ledgers, approve, and export Tally XML</p>
+          <p className="text-gray-500 text-sm mt-1">Map ledgers, approve, and post to Tally</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={toggleAllReady}>
             <CheckSquare className="mr-2 h-4 w-4" /> Select ready
           </Button>
-          <Button size="sm" disabled={!selected.size || busy} onClick={bulkApprove}>
+          <Button size="sm" variant="outline" disabled={!selected.size || busy} onClick={bulkApprove}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Approve selected ({selected.size})
           </Button>
+          {deletable.length > 0 && (
+            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => setConfirmDelete(deletable)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete From Tally ({deletable.length})
+            </Button>
+          )}
           <Button
             size="sm"
-            className="bg-[#0b6b3a] hover:bg-[#0a5c32]"
+            variant="outline"
             disabled={busy}
             onClick={() => exportTally(selected.size ? [...selected] : undefined)}
           >
             <Download className="mr-2 h-4 w-4" />
-            Export Tally XML
+            Export XML
+          </Button>
+          <Button
+            size="sm"
+            className="bg-[#0b6b3a] hover:bg-[#0a5c32]"
+            disabled={!selected.size || push.state.phase !== "idle"}
+            onClick={() => push.start([...selected])}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Push to Tally ({selected.size})
           </Button>
         </div>
       </div>
+
+      {blocked && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+              <div>
+                <h3 className="font-semibold text-red-900">
+                  Tally would reject this export
+                </h3>
+                <p className="mt-0.5 text-sm text-red-800">
+                  Fixed here, these never become an error buried in Tally.imp. Errors block
+                  the export; warnings do not.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setBlocked(null)}
+              className="rounded p-1 text-red-500 hover:bg-red-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <ul className="mt-3 space-y-2">
+            {blocked.map((issue, i) => {
+              const v = vouchers.find((row) => row.id === issue.voucherId);
+              return (
+                <li
+                  key={`${issue.voucherId}-${issue.code}-${i}`}
+                  className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-lg bg-white px-3 py-2 text-sm"
+                >
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                      issue.severity === "error"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {issue.severity}
+                  </span>
+                  {v ? (
+                    <Link
+                      href={`/vouchers/${v.id}`}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      {v.vendor} · {v.invoiceNumber}
+                    </Link>
+                  ) : (
+                    issue.voucherId && (
+                      <span className="font-medium text-gray-700">
+                        {issue.voucherId.slice(0, 8)}
+                      </span>
+                    )
+                  )}
+                  <span className="text-gray-700">{issue.message}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -183,6 +344,18 @@ export default function TransactionsList({
                 {f === "all" ? "All" : f === "ready" ? "Ready" : "Needs attention"}
               </button>
             ))}
+            <button
+              onClick={() => setHideSynced((v) => !v)}
+              className={`px-3 py-2 rounded-lg text-xs font-medium ${hideSynced ? "bg-emerald-600 text-white" : "bg-white border text-gray-500"}`}
+            >
+              Hide Tally Synced
+            </button>
+            <button
+              onClick={() => setFailedOnly((v) => !v)}
+              className={`px-3 py-2 rounded-lg text-xs font-medium ${failedOnly ? "bg-red-600 text-white" : "bg-white border text-gray-500"}`}
+            >
+              Failed Records Only
+            </button>
           </>
         )}
       </div>
@@ -199,26 +372,26 @@ export default function TransactionsList({
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3 text-right">Amount</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Tally</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
-                      No invoices yet. Upload to create vouchers.
+                    <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                      {failedOnly || hideSynced
+                        ? "No rows match these filters."
+                        : "No invoices yet. Upload to create vouchers."}
                     </td>
                   </tr>
                 )}
                 {filtered.map((v) => (
                   <tr key={v.id} className="border-b hover:bg-gray-50 transition group">
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(v.id)}
-                        onChange={() => toggle(v.id)}
-                        disabled={v.status !== "DRAFT" && v.status !== "APPROVED"}
-                      />
+                      {/* Posted rows stay selectable: removing one from Tally's
+                          books is done from this table too. */}
+                      <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggle(v.id)} />
                     </td>
                     <td className="px-4 py-3 font-medium">
                       <Link
@@ -238,6 +411,9 @@ export default function TransactionsList({
                         isDuplicate={v.isDuplicate}
                         confidence={v.confidence}
                       />
+                    </td>
+                    <td className="px-4 py-3">
+                      <TallySyncBadge sync={syncs[v.id]} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
@@ -308,6 +484,36 @@ export default function TransactionsList({
             </table>
           </div>
         </div>
+      )}
+
+      <TallySyncOverlay
+        push={push}
+        labels={labels}
+        onClose={() => {
+          setSelected(new Set());
+          void refreshSyncs();
+        }}
+      />
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete ${confirmDelete.length} voucher${confirmDelete.length === 1 ? "" : "s"} from Tally?`}
+          body={
+            <>
+              This removes {confirmDelete.length === 1 ? "the voucher" : "these vouchers"} from
+              Tally&apos;s books on the connected machine — not just from this workspace. Tally
+              resolves the deletion by the id we posted with, so it removes exactly what we sent.
+              It cannot be undone from here; the voucher would have to be pushed again.
+            </>
+          }
+          confirmLabel="Delete from Tally"
+          onConfirm={() => {
+            const ids = confirmDelete;
+            setConfirmDelete(null);
+            void push.remove(ids);
+          }}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   );

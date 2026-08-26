@@ -14,8 +14,11 @@ export type LineRole =
   | "CGST"
   | "SGST"
   | "IGST"
+  | "CESS"
   | "ROUND_OFF"
-  | "DISCOUNT";
+  | "DISCOUNT"
+  /** The bank or cash side of a Payment, Receipt or Contra voucher. */
+  | "BANK";
 export type MappedVia =
   | "RULE"
   | "GSTIN_MEMORY"
@@ -77,6 +80,8 @@ export interface NormalizedInvoice {
   cgst: number;
   sgst: number;
   igst: number;
+  /** Compensation cess. Optional because OCR rarely finds one. */
+  cess?: number;
   discount: number;
   total: number;
   items: NormalizedItem[];
@@ -97,11 +102,13 @@ export interface ResolvedLedgers {
   sgstLedgerId: string;
   igstLedgerId: string;
   roundOffLedgerId: string;
+  cessLedgerId?: string | null;
   discountLedgerId?: string | null;
   cgstLedgerName?: string;
   sgstLedgerName?: string;
   igstLedgerName?: string;
   roundOffLedgerName?: string;
+  cessLedgerName?: string;
   discountLedgerName?: string;
 }
 
@@ -116,6 +123,39 @@ export interface VoucherLineDraft {
   hsnCode: string | null;
   gstRate: number | null;
   sortOrder: number;
+}
+
+/**
+ * One posting: a ledger, an amount, and a side. Nothing else.
+ *
+ * `amount` is always positive — the side decides the column. Signed amounts
+ * invite the bug where a negative credit quietly becomes a debit somewhere
+ * downstream and the voucher still "balances".
+ */
+export interface VoucherLineInput {
+  role: LineRole;
+  ledgerId: string | null;
+  ledgerName: string | null;
+  amount: number;
+  side: "DR" | "CR";
+  confidence?: number | null;
+  mappedVia?: MappedVia | null;
+  hsnCode?: string | null;
+  gstRate?: number | null;
+}
+
+/**
+ * A voucher expressed as lines, which every source can produce: an invoice, a
+ * journal row, a bank transaction, a multi-rate spreadsheet row.
+ */
+export interface VoucherInput {
+  voucherType: VoucherType;
+  date: Date;
+  narration?: string | null;
+  lines: VoucherLineInput[];
+  /** Where the balancing residual posts. */
+  roundOffLedgerId?: string | null;
+  roundOffLedgerName?: string | null;
 }
 
 export interface VoucherDraft {

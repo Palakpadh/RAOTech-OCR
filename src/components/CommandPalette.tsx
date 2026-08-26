@@ -11,6 +11,7 @@ import {
   BookOpen,
   Kanban,
   Filter,
+  PlugZap,
 } from "lucide-react";
 import { extraPagesEnabled } from "@/lib/featureFlags";
 
@@ -29,6 +30,13 @@ const COMMANDS = [
   { id: "pipeline", label: "Pipeline board", href: "/pipeline", icon: Kanban, keywords: "kanban", localOnly: true },
   { id: "gst", label: "GST reconciliation", href: "/gst", icon: Scale, keywords: "2b itc", localOnly: true },
   { id: "settings", label: "Ledgers & rules", href: "/settings", icon: BookOpen, keywords: "mapping" },
+  {
+    id: "tally",
+    label: "Tally connection",
+    href: "/settings/tally",
+    icon: PlugZap,
+    keywords: "connector pair device sync master company",
+  },
 ];
 
 export function CommandPalette() {

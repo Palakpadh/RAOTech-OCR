@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8001";
+import { backendFetch } from "@/lib/backend";
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +14,7 @@ export async function POST(req: Request) {
     const backendForm = new FormData();
     backendForm.append("file", file);
 
-    const response = await fetch(`${BACKEND_URL}/extract`, {
+    const response = await backendFetch("/extract", {
       method: "POST",
       body: backendForm,
     });
