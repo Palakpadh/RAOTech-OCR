@@ -20,7 +20,6 @@ import {
   PlugZap,
   Settings,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { SignOutButton } from "@clerk/nextjs";
 import { extraPagesEnabled } from "@/lib/featureFlags";
 
