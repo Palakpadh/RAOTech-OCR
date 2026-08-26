@@ -241,12 +241,12 @@ export default function PricingPage() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <SignInButton mode="redirect" forceRedirectUrl="/dashboard">
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
               <Button variant="outline" className="rounded-[8px] border-border">
                 Sign In
               </Button>
             </SignInButton>
-            <SignUpButton mode="redirect">
+            <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
               <Button className="rounded-[8px] bg-primary text-primary-foreground hover:bg-primary/90">
                 Sign Up
               </Button>
