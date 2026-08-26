@@ -5,6 +5,7 @@ import { listSheets, parseSheet, ExcelParseError } from "@/lib/excel/parse";
 import { headerFingerprint } from "@/lib/excel/detectHeader";
 import { detectLayout } from "@/lib/excel/detectLayout";
 import { suggestMapping } from "@/lib/excel/suggestMapping";
+import { suggestMasterMapping } from "@/lib/excel/masters";
 import { findTemplates } from "@/lib/excel/templates";
 import { encodeSheet } from "@/lib/excel/rowStorage";
 import { MAX_ROWS, type ExcelDocType, type ItemMode } from "@/lib/excel/types";
@@ -21,7 +22,12 @@ const DOC_TYPES: ExcelDocType[] = [
   "SALE",
   "SALE_RETURN",
   "JOURNAL",
+  "LEDGER_MASTER",
+  "ITEM_MASTER",
 ];
+
+/** The two that produce masters rather than vouchers. */
+const MASTER_TYPES: ExcelDocType[] = ["LEDGER_MASTER", "ITEM_MASTER"];
 
 /**
  * POST /api/excel/upload
@@ -91,19 +97,38 @@ export async function POST(req: Request) {
     }
 
     const fingerprint = headerFingerprint(parsed.headers);
-    const layout = detectLayout(parsed.headers);
+    const isMaster = MASTER_TYPES.includes(docType);
+
+    /**
+     * A master sheet skips layout detection and the invoice mapper entirely.
+     *
+     * `detectLayout` is looking for wide-vs-long GST columns and `suggestMapping`
+     * for party / taxable / tax / total — a chart of accounts has none of those,
+     * and feeding one through produced confident nonsense: "Opening Balance"
+     * mapped to the invoice total, "Under" to the party name. A wrong guess that
+     * looks certain is worse than no guess, so masters get their own mapper.
+     */
+    const layout = isMaster ? null : detectLayout(parsed.headers);
     // Scoring the sampled cells, not just the header text, is what catches a
     // GSTIN column called "Tax ID" and rejects a "Date" column holding serials.
-    const suggested = suggestMapping(parsed.headers, layout, docType, itemMode, {
-      sampleRows: parsed.rows.slice(0, 50),
-      headerRowIndex: parsed.headerRowIndex,
-    });
-    const templates = await findTemplates(prisma, {
-      userId: user.id,
-      clientId: client.id,
-      docType,
-      headers: parsed.headers,
-    });
+    const suggested =
+      isMaster || !layout
+        ? null
+        : suggestMapping(parsed.headers, layout, docType, itemMode, {
+            sampleRows: parsed.rows.slice(0, 50),
+            headerRowIndex: parsed.headerRowIndex,
+          });
+    const masterMapping = isMaster
+      ? suggestMasterMapping(parsed.headers, docType as "LEDGER_MASTER" | "ITEM_MASTER")
+      : null;
+    const templates = isMaster
+      ? []
+      : await findTemplates(prisma, {
+          userId: user.id,
+          clientId: client.id,
+          docType,
+          headers: parsed.headers,
+        });
 
     const upload = await prisma.excelUpload.create({
       data: {
@@ -132,13 +157,18 @@ export async function POST(req: Request) {
       totalRows: parsed.rows.length,
       maxRows: MAX_ROWS,
       layout,
-      suggestedMapping: suggested.mapping,
+      isMaster,
+      /** Populated for master sheets; the invoice mapper is skipped for those. */
+      masterMapping,
+      suggestedMapping: suggested?.mapping ?? null,
       /** Per-field confidence and reasoning, so a guess can be questioned. */
-      suggestionDetail: {
-        fields: suggested.fields,
-        unmappedColumns: suggested.unmappedColumns,
-        overall: suggested.overall,
-      },
+      suggestionDetail: suggested
+        ? {
+            fields: suggested.fields,
+            unmappedColumns: suggested.unmappedColumns,
+            overall: suggested.overall,
+          }
+        : null,
       templates,
       /** A window on the real data, so the user can sanity-check the mapping. */
       preview: parsed.rows.slice(0, 20),

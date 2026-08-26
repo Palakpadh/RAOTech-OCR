@@ -6,11 +6,22 @@ import type {
   VoucherType,
 } from "./types";
 import { buildVoucherFromLines } from "./buildVoucherLines";
+import { matchStockItem, type StockItemIndex } from "./resolveStockItems";
 
 interface BuildOptions {
   /** Rounding tolerance in rupees before a warning is raised (default ₹1). */
   roundingTolerance?: number;
   narration?: string | null;
+  /**
+   * The client's stock item masters, keyed by folded item name.
+   *
+   * Omit it and nothing changes: item lines post as plain ledger entries the
+   * way they always have. Supply it and any item line whose name matches a
+   * master gains an inventory allocation, so the client's stock in Tally moves
+   * with the money. See `resolveStockItems.ts` for why this is a lookup rather
+   * than a per-client toggle.
+   */
+  stockItems?: StockItemIndex;
 }
 
 /**
@@ -50,6 +61,10 @@ export function buildVoucher(
   // 1) Item / expense lines, net of tax.
   if (inv.items.length > 0) {
     for (const { item, ledger } of resolved.itemLedgers) {
+      // Only if the workspace actually holds a master for this item. No master
+      // means no inventory entry, which is the pre-inventory behaviour exactly.
+      const stock = opts.stockItems ? matchStockItem(opts.stockItems, item.name) : null;
+
       lines.push({
         role: "ITEM",
         ledgerId: ledger?.id ?? null,
@@ -60,6 +75,17 @@ export function buildVoucher(
         mappedVia: ledger?.via ?? null,
         hsnCode: item.hsnCode,
         gstRate: item.gstRate,
+        ...(stock
+          ? {
+              stockItemId: stock.id,
+              // The master's spelling, not the sheet's: Tally resolves the item
+              // by name and its own is the one that will match.
+              stockItemName: stock.name,
+              quantity: item.qty || null,
+              unit: stock.unit,
+              rate: item.rate || null,
+            }
+          : {}),
       });
     }
   } else {

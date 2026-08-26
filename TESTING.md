@@ -257,7 +257,78 @@ npx tsx scripts/e2e-bank.mts check     # after the connector has drained
 npx tsx scripts/e2e-bank.mts cleanup   # unposts from Tally, then offers to delete
 ```
 
-### 3.4 Pushing to Tally
+### 3.4 Bulk master upload — ledgers and stock items
+
+The first hour of every new client. A firm taking one on has a chart of
+accounts and an item list in a sheet already; without this they retype it.
+
+1. **Sheets → Upload**, and pick **Ledgers (masters)** or **Stock items
+   (masters)** as the document type. The item-detail question disappears — a
+   master sheet has no invoices in it — and the wizard drops from five steps to
+   two.
+2. Name the columns. The server has already guessed, so you land on a preview of
+   your own data rather than an empty form.
+3. Read the four counters: **rows**, **will create**, **already here**,
+   **blocked**. Nothing is written until you press the button.
+
+**Things worth deliberately breaking:**
+
+- Put a nonsense group ("Wibble") in a ledger sheet's *Under* column. It should
+  **warn**, file the ledger under Current Assets, and still create it. Current
+  Assets is deliberately not a posting default anywhere, so a misfiled ledger
+  shows up under an odd heading instead of quietly becoming the default purchase
+  account for the whole client.
+- Leave an item's **Unit** blank. It should **refuse that row**. Tally cannot
+  change a stock item's base unit once stock has moved against it, so defaulting
+  to "Nos" would not be a guess anyone could take back — it would be a permanent
+  wrong unit on the client's master.
+- Upload the same sheet twice. The second run should report every row as
+  "already here" and change nothing. An existing master is never overwritten:
+  re-uploading a chart must not re-file a ledger someone has since corrected by
+  hand, or move a party that vouchers already post against.
+- Put the same name in two rows. Both are blocked, not silently deduplicated.
+
+Nothing is pushed to Tally from this screen. The rows land locally and the
+ordinary `MASTER_CREATE` job carries them over on the next sync — one path to
+Tally, not two.
+
+### 3.5 Stock: vouchers that move inventory
+
+**This only matters for clients who keep stock in Tally**, and it is switched on
+by the presence of masters rather than by a setting: an item line gets an
+inventory allocation only if the workspace has a stock item of that name. A
+services client never has any, so nothing about their vouchers changes.
+
+1. Upload item masters ([3.4](#34-bulk-master-upload--ledgers-and-stock-items)).
+2. Upload a `WITH_ITEM` purchase sheet whose item names match those masters.
+3. Push, then check in TallyPrime: `Gateway → Stock Summary`. The quantities
+   should have moved, not just the money.
+
+**What wrong looks like:** the expense doubled. An item line's accounting ledger
+belongs *inside* its inventory entry; emitted both there and beside it, Tally
+accepts the voucher, the books still balance, and the purchase account is
+debited twice. There is a unit test pinning this
+(`exportXml.inventory.test.ts`) and an assertion in the end-to-end script,
+because nothing on our side would ever report it — the client would just find
+their expenses doubled.
+
+**Before any of this works, the company needs inventory switched on:**
+`F11 → Inventory Features → Maintain Stock`. A company running "Maintain
+Accounts Only" accepts stock item masters quite happily and then refuses every
+voucher that names one, *with no reason given*. That was measured, not guessed
+(`connector-protocol.md` rule 13), and the app now says so in the failure
+message rather than making you find it.
+
+Headless:
+
+```bash
+npx tsx scripts/e2e-inventory.mts run       # 16 local checks, no Tally needed
+npx tsx scripts/e2e-inventory.mts check     # after the connector drains
+npx tsx scripts/e2e-inventory.mts cleanup
+npx tsx scripts/probe-inventory.mts         # what Tally accepts, measured live
+```
+
+### 3.6 Pushing to Tally
 
 1. Approve some vouchers.
 2. **Send to Tally.** A badge tracks each one: grey queued → amber sending →
@@ -278,14 +349,14 @@ npx tsx scripts/e2e-idempotency.mts
 Book. Unsync it again; that must also report success — a voucher that is already
 gone is the state you asked for.
 
-### 3.5 GST 2B reconciliation
+### 3.7 GST 2B reconciliation
 
 1. **GST → Upload** a GSTR-2B JSON.
 2. It matches each row against your purchase invoices and buckets them:
    matched, value mismatch, missing in 2B, missing in books, duplicate.
 3. Check a value mismatch by hand — the two amounts are shown side by side.
 
-### 3.6 Ledger rules (invoice side)
+### 3.8 Ledger rules (invoice side)
 
 **Settings → Ledger Rules.** These are the invoice-side rules: match on GSTIN,
 vendor name or HSN. They are a different mechanism from the banking rule list —
@@ -301,7 +372,7 @@ The bill must **not** get the rent ledger.
 ## 4. The automated tests
 
 ```bash
-npm test                        # 589 unit tests, no database, no Tally, ~3s
+npm test                        # 614 unit tests, no database, no Tally, ~3s
 npx tsc --noEmit                # types
 npm run lint
 ```
@@ -314,6 +385,8 @@ each needs TallyPrime running:
 | `scripts/e2e-tally.mts` | connector loop: seed → enqueue → check → cleanup | yes |
 | `scripts/e2e-excel.mts` | sheet → mapped → vouchers → queued | no |
 | `scripts/e2e-bank.mts` | statement → rules → save → vouchers → queued | no |
+| `scripts/e2e-inventory.mts` | stock masters → a purchase that moves stock | no |
+| `scripts/probe-inventory.mts` | what Tally accepts for stock items and inventory vouchers | yes |
 | `scripts/e2e-idempotency.mts` | a re-push alters, it does not duplicate | yes |
 | `scripts/probe-bank-voucher.mts` | Tally accepts all four bank voucher shapes | yes |
 
@@ -347,6 +420,9 @@ happened next. "Not sure" has to be treated as "it is in there".
 | Push rejected with **no reason at all** | usually an unbalanced voucher, or Tally is in education mode | check the voucher totals; check the Tally licence |
 | `Ledger 'Unknown' does not exist!` | a voucher line had no ledger and the XML writer substituted a placeholder | find the unmapped line; approval should have blocked this |
 | `Ledger 'X' does not exist!` | the ledger exists here but not in Tally | run **Sync masters** before pushing |
+| `Stock Item 'X' does not exist!` | same, for a stock item | run **Sync masters**; Tally invents neither |
+| Stock voucher rejected with **no reason** | the company has inventory off | `F11 → Inventory Features → Maintain Stock` |
+| A master create keeps failing with a stale error | Tally poisons a name that has ever failed | fix the cause, then restart TallyPrime — retrying the same name replays the old error |
 | Voucher stuck on **amber / sending** | the connector took the job and never reported back | check the agent is running; re-push — it is idempotent |
 | Nothing happens on push | no connector paired, or Tally not running | Settings → Tally shows last-seen and Tally reachability |
 | `prisma generate` → `EPERM` | dev server holding the query engine DLL | stop the dev server first |

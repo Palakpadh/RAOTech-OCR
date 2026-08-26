@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizeInvoice } from "./normalize";
 import { classifyVoucher } from "./classifyVoucher";
 import { resolveLedgersForInvoice } from "./resolveLedger";
+import { loadStockItemIndex } from "./resolveStockItems";
 import { buildVoucher } from "./buildVoucher";
 import { seedLedgersForUser } from "./seedLedgers";
 import type { NormalizedInvoice, VoucherType } from "./types";
@@ -146,16 +147,45 @@ export async function createDraftVoucherForInvoice(
             },
           ];
         } else {
-          resolved.itemLedgers = resolved.itemLedgers.map((l) =>
-            l.ledger ? l : { ...l, ledger: ref }
-          );
+          /**
+           * An explicit choice wins, it does not merely fill a gap.
+           *
+           * This used to be `l.ledger ? l : {...}`, so an item line the resolver
+           * had already guessed at kept the guess and the user's choice was
+           * silently dropped. It looked harmless because the demo sheet happened
+           * to name the same account the resolver picked — but a firm choosing
+           * "Purchase - Local" in the wizard while resolution found "Purchase
+           * Account" got their entries posted to the wrong head, with nothing
+           * anywhere saying so. Same class of failure as the unmapped-tax-ledger
+           * bug, just inverted: there the app substituted for a missing choice,
+           * here it substituted for a present one.
+           *
+           * The wizard exposes exactly one purchase/sales account per sheet, so
+           * flattening every item line onto it is what the user asked for. If
+           * per-item HSN routing is ever surfaced, this is the line that has to
+           * learn the difference.
+           */
+          resolved.itemLedgers = resolved.itemLedgers.map((l) => ({ ...l, ledger: ref }));
         }
       }
     }
   }
 
+  /**
+   * Stock masters, loaded only when the invoice actually names items.
+   *
+   * Skipping the query for an item-less invoice keeps the common case — a
+   * scanned bill with a single net line — at exactly the cost it was before
+   * inventory existed. When there are items, a workspace with no stock masters
+   * gets an empty index and the vouchers come out unchanged.
+   */
+  const stockItems = inv.items.length
+    ? await loadStockItemIndex(prisma, userId, clientId)
+    : undefined;
+
   const draft = buildVoucher(inv, resolved, voucherType, {
     narration: invoice.invoiceNumber ? `Inv ${invoice.invoiceNumber}` : null,
+    stockItems: stockItems?.size ? stockItems : undefined,
   });
 
   const confidences = draft.lines.map((l) => l.confidence).filter((c): c is number => c != null);
@@ -182,6 +212,11 @@ export async function createDraftVoucherForInvoice(
     mappedVia: l.mappedVia,
     hsnCode: l.hsnCode,
     gstRate: l.gstRate,
+    stockItemId: l.stockItemId ?? null,
+    stockItemName: l.stockItemName ?? null,
+    quantity: l.quantity ?? null,
+    unit: l.unit ?? null,
+    rate: l.rate ?? null,
     sortOrder: l.sortOrder,
   }));
 

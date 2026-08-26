@@ -21,6 +21,24 @@ type ExportLine = {
   credit: number;
   hsnCode?: string | null;
   gstRate?: number | null;
+
+  /**
+   * Set only when this line moves stock. The accounting ledger above then
+   * appears *inside* the inventory entry rather than beside it.
+   */
+  stockItemName?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  rate?: number | null;
+};
+
+export type ExportStockItem = {
+  name: string;
+  /** Tally rejects a stock item naming a unit that does not exist yet. */
+  unit?: string | null;
+  hsnCode?: string | null;
+  gstRate?: number | null;
+  alias?: string | null;
 };
 
 type ExportVoucher = {
@@ -183,6 +201,70 @@ function ledgerXml(
 }
 
 /**
+ * A simple unit of measure.
+ *
+ * Units come first in the master order, because a stock item naming a
+ * `<BASEUNITS>` Tally does not have is rejected outright. They are cheap and
+ * idempotent, so every unit a batch mentions is declared rather than tracked.
+ */
+function unitXml(unit: string) {
+  return `
+      <TALLYMESSAGE xmlns:UDF="TallyUDF">
+        <UNIT NAME="${esc(unit)}" ACTION="Create">
+          <NAME>${esc(unit)}</NAME>
+          <ISSIMPLEUNIT>Yes</ISSIMPLEUNIT>
+          <DECIMALPLACES>2</DECIMALPLACES>
+        </UNIT>
+      </TALLYMESSAGE>`;
+}
+
+/**
+ * A stock item master.
+ *
+ * Note what is *not* here: `<PARENT>`. A company that has never used inventory
+ * has no stock groups at all — not even `Primary`, which exists as a ledger
+ * group and does not exist as a stock group — so naming one is rejected with
+ * `Stock Group 'Primary' does not exist!`. Omitting the tag lands the item at
+ * the root, which is exactly where an empty parent and Tally's own escaped
+ * `&#4; Primary` put it, and it is the only form that cannot fail.
+ *
+ * Getting this right first time matters more than usual: a master create that
+ * fails poisons that name for the rest of Tally's session, and every retry
+ * replays the original error even after the XML is corrected
+ * (connector-protocol.md rule 12).
+ */
+function stockItemXml(
+  item: ExportStockItem,
+  opts: { gstApplicableFrom: string; includeGstDetails: boolean }
+) {
+  const itemName = name(item.name);
+  const unit = name(item.unit || "");
+
+  const gstBlock =
+    opts.includeGstDetails && (item.gstRate != null || item.hsnCode)
+      ? `
+          <GSTAPPLICABLE>&#4; Applicable</GSTAPPLICABLE>
+          <GSTTYPEOFSUPPLY>Goods</GSTTYPEOFSUPPLY>${
+            item.hsnCode ? `
+          <HSNCODE>${esc(item.hsnCode)}</HSNCODE>` : ""
+          }`
+      : "";
+
+  return `
+      <TALLYMESSAGE xmlns:UDF="TallyUDF">
+        <STOCKITEM NAME="${esc(itemName)}" ACTION="Create">
+          <NAME.LIST>
+            <NAME>${esc(itemName)}</NAME>${
+              item.alias ? `
+            <NAME>${esc(name(item.alias))}</NAME>` : ""
+            }
+          </NAME.LIST>${unit ? `
+          <BASEUNITS>${esc(unit)}</BASEUNITS>` : ""}${gstBlock}
+        </STOCKITEM>
+      </TALLYMESSAGE>`;
+}
+
+/**
  * The REMOTEID we stamp on every voucher, and Tally's idempotency key.
  *
  * Verified against a live instance: re-importing with the same REMOTEID ALTERs
@@ -203,8 +285,68 @@ function voucherXml(v: ExportVoucher, opts: { includeGstDetails: boolean }) {
   // so a party balance is never left unreferenced.
   const billRef = name(v.invoiceNumber || "") || `RAO-${v.id.slice(0, 8)}`;
 
+  /**
+   * Quantities and rates carry their unit inline: Tally wants "10 Nos" and
+   * "100/Nos", not "10" and "100". A unitless item still posts, so a sheet that
+   * never named a unit is not blocked here.
+   */
+  const qty = (n: number, unit: string | null | undefined) =>
+    unit ? `${n} ${name(unit)}` : String(n);
+  const rateOf = (n: number, unit: string | null | undefined) =>
+    unit ? `${n.toFixed(2)}/${name(unit)}` : n.toFixed(2);
+
+  /**
+   * The lines that move stock, and the trap this whole block exists to avoid.
+   *
+   * An item line's accounting ledger belongs *inside* its inventory entry as an
+   * ACCOUNTINGALLOCATIONS.LIST. Emit it there and also as a sibling
+   * ALLLEDGERENTRIES.LIST and Tally accepts the voucher, the books balance, and
+   * the purchase account is debited twice — a silent doubling of the client's
+   * expense that nothing on our side would ever report. So a line appears in
+   * exactly one of the two blocks below, never both.
+   */
+  const stockLines = v.lines.filter(
+    (l) => (l.debit > 0 || l.credit > 0) && !!l.stockItemName
+  );
+
+  const inventoryEntries = stockLines
+    .map((l) => {
+      const isDebit = l.debit > 0;
+      const amount = isDebit ? `-${l.debit.toFixed(2)}` : l.credit.toFixed(2);
+      const value = isDebit ? l.debit : l.credit;
+      const q = l.quantity ?? null;
+      // Rate is only meaningful with a quantity, and deriving it from the line
+      // total is better than omitting it: Tally shows a zero rate otherwise.
+      const r = l.rate ?? (q && q !== 0 ? value / q : null);
+
+      const qtyTags =
+        q != null
+          ? `
+              <ACTUALQTY>${esc(qty(q, l.unit))}</ACTUALQTY>
+              <BILLEDQTY>${esc(qty(q, l.unit))}</BILLEDQTY>`
+          : "";
+      const rateTag =
+        r != null
+          ? `
+              <RATE>${esc(rateOf(r, l.unit))}</RATE>`
+          : "";
+
+      return `
+            <ALLINVENTORYENTRIES.LIST>
+              <STOCKITEMNAME>${esc(name(l.stockItemName || ""))}</STOCKITEMNAME>
+              <ISDEEMEDPOSITIVE>${isDebit ? "Yes" : "No"}</ISDEEMEDPOSITIVE>${rateTag}
+              <AMOUNT>${amount}</AMOUNT>${qtyTags}
+              <ACCOUNTINGALLOCATIONS.LIST>
+                <LEDGERNAME>${esc(name(l.ledgerName))}</LEDGERNAME>
+                <ISDEEMEDPOSITIVE>${isDebit ? "Yes" : "No"}</ISDEEMEDPOSITIVE>
+                <AMOUNT>${amount}</AMOUNT>
+              </ACCOUNTINGALLOCATIONS.LIST>
+            </ALLINVENTORYENTRIES.LIST>`;
+    })
+    .join("");
+
   const entries = v.lines
-    .filter((l) => l.debit > 0 || l.credit > 0)
+    .filter((l) => (l.debit > 0 || l.credit > 0) && !l.stockItemName)
     .map((l) => {
       const isDebit = l.debit > 0;
       // Tally's convention: debits are "deemed positive" and carry a negative
@@ -258,7 +400,7 @@ function voucherXml(v: ExportVoucher, opts: { includeGstDetails: boolean }) {
           <NARRATION>${esc(narr || "Imported from RAO AI")}</NARRATION>
           <VOUCHERTYPENAME>${esc(vtype)}</VOUCHERTYPENAME>
           <VOUCHERNUMBER>${esc(voucherNumber)}</VOUCHERNUMBER>${partyTag}
-          ${entries}
+          ${inventoryEntries}${entries}
         </VOUCHER>
       </TALLYMESSAGE>`;
 }
@@ -266,6 +408,11 @@ function voucherXml(v: ExportVoucher, opts: { includeGstDetails: boolean }) {
 export function buildTallyXml(opts: {
   companyName?: string | null;
   ledgers: ExportLedger[];
+  /**
+   * Stock item masters to create before the vouchers that name them. Tally
+   * will not invent one, exactly as with ledgers.
+   */
+  stockItems?: ExportStockItem[];
   vouchers: ExportVoucher[];
   /** GST rate effective-from date, YYYYMMDD. Defaults to 1 July 2017. */
   gstApplicableFrom?: string;
@@ -291,6 +438,37 @@ export function buildTallyXml(opts: {
   const ledgerBlock = [...uniqueLedgers.values()]
     .map((l) => ledgerXml(l, { gstApplicableFrom, includeGstDetails }))
     .join("");
+
+  const uniqueItems = new Map<string, ExportStockItem>();
+  for (const i of opts.stockItems ?? []) {
+    const key = name(i.name || "");
+    if (key) uniqueItems.set(key, i);
+  }
+
+  /**
+   * Every unit any of them mentions, declared first.
+   *
+   * Order is load-bearing: a stock item naming a `<BASEUNITS>` Tally does not
+   * have is rejected, and that rejection then poisons the item name for the
+   * rest of the session. Units are idempotent and cost one line each, so they
+   * are re-declared every time rather than tracked.
+   */
+  const units = new Set<string>();
+  for (const i of uniqueItems.values()) {
+    const u = name(i.unit || "");
+    if (u) units.add(u);
+  }
+  for (const v of opts.vouchers) {
+    for (const l of v.lines) {
+      const u = name(l.unit || "");
+      if (u && l.stockItemName) units.add(u);
+    }
+  }
+
+  const unitBlock = [...units].map(unitXml).join("");
+  const stockItemBlock = [...uniqueItems.values()]
+    .map((i) => stockItemXml(i, { gstApplicableFrom, includeGstDetails }))
+    .join("");
   const voucherBlock = opts.vouchers
     .map((v) => voucherXml(v, { includeGstDetails }))
     .join("");
@@ -309,7 +487,9 @@ export function buildTallyXml(opts: {
         </STATICVARIABLES>
       </REQUESTDESC>
       <REQUESTDATA>
+${unitBlock}
 ${ledgerBlock}
+${stockItemBlock}
 ${voucherBlock}
       </REQUESTDATA>
     </IMPORTDATA>

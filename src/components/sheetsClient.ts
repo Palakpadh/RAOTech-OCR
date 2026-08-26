@@ -25,7 +25,13 @@ export interface UploadResponse {
   droppedRows: number;
   totalRows: number;
   maxRows: number;
-  layout: LayoutDetection;
+  /** Null for a master sheet — layout detection is about GST columns. */
+  layout: LayoutDetection | null;
+  /** True when this upload creates masters rather than vouchers. */
+  isMaster?: boolean;
+  /** Column guesses for a master sheet; null for a transaction sheet. */
+  masterMapping: Record<string, number | null> | null;
+  /** Null for a master sheet — the invoice mapper is skipped for those. */
   suggestedMapping: SheetMapping;
   templates: TemplateMatch[];
   preview: CellValue[][];
@@ -148,7 +154,49 @@ export const DOC_TYPE_LABELS: Record<ExcelDocType, string> = {
   SALE: "Sales",
   SALE_RETURN: "Sales Return",
   JOURNAL: "Journal",
+  LEDGER_MASTER: "Ledgers (masters)",
+  ITEM_MASTER: "Stock items (masters)",
 };
+
+/** The two that create masters. They take a different route after upload. */
+export const MASTER_DOC_TYPES: ExcelDocType[] = ["LEDGER_MASTER", "ITEM_MASTER"];
+
+export const isMasterDocType = (d: ExcelDocType) => MASTER_DOC_TYPES.includes(d);
+
+export interface MasterPreviewResponse {
+  dryRun: boolean;
+  kind: "LEDGER_MASTER" | "ITEM_MASTER";
+  sheetName: string;
+  headers: string[];
+  mapping: Record<string, number | null>;
+  totalRows: number;
+  committableCount: number;
+  wouldCreate: number;
+  skipped: number;
+  blocked: number;
+  created?: number;
+  message?: string;
+  issues: { row: number; code: string; severity: "error" | "warning"; message: string }[];
+  preview: {
+    row: number;
+    draft: Record<string, unknown> | null;
+    issues: { code: string; severity: string; message: string }[];
+  }[];
+}
+
+/** Preview or create the masters a staged sheet describes. */
+export async function postMasters(
+  uploadId: string,
+  input: { mapping?: Record<string, number | null>; dryRun?: boolean }
+): Promise<MasterPreviewResponse> {
+  return asJson<MasterPreviewResponse>(
+    await fetch(`/api/excel/uploads/${uploadId}/masters`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+  );
+}
 
 /** Fields the wizard offers in stage 1, in the order an accountant reads them. */
 export const FIELD_ORDER: {

@@ -222,6 +222,14 @@ function makeDb(initialState: "QUEUED" | "CLAIMED" | "DONE" | "FAILED" = "CLAIME
         return { count: 1 };
       },
     },
+    /**
+     * Read only when Tally rejects a voucher and gives no reason, to decide
+     * whether the "you probably have inventory switched off" wording applies.
+     * Empty here: none of these fixtures move stock.
+     */
+    voucherLine: {
+      findMany: async () => [] as { voucherId: string }[],
+    },
     ledger: {
       updateMany: async (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
         calls.ledger.push(args);

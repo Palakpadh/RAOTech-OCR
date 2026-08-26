@@ -105,17 +105,31 @@ export function isTallySuccess(t: TallyCounters | null | undefined): boolean {
  * "" would render as a blank red row with nothing to act on.
  */
 export const BLANK_REJECTION_REASON =
-  "Tally rejected this voucher without giving a reason. Measured against TallyPrime 7.1 that means one of two things: the voucher's debits and credits do not agree, or Tally is running in education mode, which only accepts vouchers dated the 1st, 2nd or last day of a month.";
+  "Tally rejected this voucher without giving a reason. Measured against TallyPrime 7.1 that means one of three things: the voucher's debits and credits do not agree; Tally is running in education mode, which only accepts vouchers dated the 1st, 2nd or last day of a month; or the voucher moves stock and the company has inventory switched off (F11 -> Inventory Features -> Maintain Stock).";
+
+/**
+ * The same thing, narrowed when we know the voucher carried stock.
+ *
+ * Worth splitting out because the third cause is the only one the user can fix
+ * in ten seconds, and it is invisible from Tally's side: the same company
+ * accepts stock item masters happily and then refuses every voucher that names
+ * one, with no reason given. Telling someone to check their debits when the
+ * real answer is a checkbox in F11 wastes an afternoon.
+ */
+export const BLANK_REJECTION_REASON_INVENTORY =
+  "Tally rejected this voucher without giving a reason, and it moves stock. The most likely cause by far is that this company has inventory switched off — in TallyPrime, F11 -> Inventory Features -> Maintain Stock. A company running \"Maintain Accounts Only\" accepts stock item masters and then silently refuses every voucher that uses one. Failing that, check the voucher balances and that Tally is not in education mode.";
 
 export function rejectionReason(
   entry: VoucherResultEntry | null | undefined,
-  transportError?: string | null
+  transportError?: string | null,
+  /** True when the voucher carried an inventory allocation. */
+  movesStock = false
 ): string {
   const fromLine = entry?.tally?.lineErrors?.find((s) => s && s.trim());
   if (fromLine) return fromLine.trim();
   if (entry?.error && entry.error.trim()) return entry.error.trim();
   if (transportError && transportError.trim()) return transportError.trim();
-  return BLANK_REJECTION_REASON;
+  return movesStock ? BLANK_REJECTION_REASON_INVENTORY : BLANK_REJECTION_REASON;
 }
 
 /** Education mode is the one blank-reason cause worth flagging on the company. */
@@ -291,6 +305,12 @@ export async function buildVoucherPushPayload(
               credit: l.credit,
               hsnCode: l.hsnCode,
               gstRate: l.gstRate,
+              // Present only on lines that move stock; `exportXml` switches
+              // those to an inventory entry with the ledger nested inside.
+              stockItemName: l.stockItemName,
+              quantity: l.quantity,
+              unit: l.unit,
+              rate: l.rate,
             })),
           },
         ],
@@ -369,6 +389,8 @@ export interface MasterCreatePayload {
   companyName: string;
   xml: string;
   ledgerIds: string[];
+  /** Stock items in the same envelope, so a WITH_ITEM push has its masters. */
+  stockItemIds: string[];
 }
 
 /**
@@ -388,20 +410,48 @@ export async function buildMasterCreatePayload(
     companyName: string;
     /** Restrict to the ledgers a specific batch needs. Omit for the whole chart. */
     ledgerIds?: string[];
+    /** Same, for stock items. */
+    stockItemIds?: string[];
   }
 ): Promise<MasterCreatePayload | null> {
-  const ledgers = await db.ledger.findMany({
-    where: {
-      userId: input.userId,
-      clientId: input.clientId,
-      tallyGuid: null,
-      tallyReserved: false,
-      ...(input.ledgerIds?.length ? { id: { in: input.ledgerIds } } : {}),
-    },
-    orderBy: { name: "asc" },
-  });
+  const [ledgers, stockItems] = await Promise.all([
+    db.ledger.findMany({
+      where: {
+        userId: input.userId,
+        clientId: input.clientId,
+        tallyGuid: null,
+        tallyReserved: false,
+        ...(input.ledgerIds?.length ? { id: { in: input.ledgerIds } } : {}),
+      },
+      orderBy: { name: "asc" },
+    }),
+    /**
+     * Stock items key off `tallySyncedAt`, not `tallyGuid` the way ledgers do.
+     *
+     * Ledgers chase a GUID because posting joins on it: Tally names are
+     * case-sensitive, tolerate trailing whitespace and get renamed, and a name
+     * match is the biggest source of push failures in this product category.
+     * A stock item is only ever *named* on a voucher — `<STOCKITEMNAME>` — so a
+     * GUID would buy nothing at posting time, and MASTER_PULL does not read
+     * stock items back.
+     *
+     * The cost is the same rename fragility ledgers used to have: rename an
+     * item inside Tally and we would create a second one under the old name
+     * rather than recognising it. Worth fixing when MASTER_PULL learns to read
+     * stock items; not worth blocking this on.
+     */
+    db.stockItem.findMany({
+      where: {
+        userId: input.userId,
+        clientId: input.clientId,
+        tallySyncedAt: null,
+        ...(input.stockItemIds?.length ? { id: { in: input.stockItemIds } } : {}),
+      },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
-  if (!ledgers.length) return null;
+  if (!ledgers.length && !stockItems.length) return null;
 
   return {
     companyName: input.companyName,
@@ -414,9 +464,17 @@ export async function buildMasterCreatePayload(
         gstRate: l.gstRate,
         gstin: l.parentGstin,
       })),
+      stockItems: stockItems.map((i) => ({
+        name: i.name,
+        unit: i.unit,
+        hsnCode: i.hsnCode,
+        gstRate: i.gstRate,
+        alias: i.alias,
+      })),
       vouchers: [],
     }),
     ledgerIds: ledgers.map((l) => l.id),
+    stockItemIds: stockItems.map((i) => i.id),
   };
 }
 
@@ -551,16 +609,34 @@ async function applyMasterCreateResult(
   body: JobResultBody,
   jobOk: boolean
 ) {
-  const payload = (job.payload ?? {}) as { ledgerIds?: string[]; companyName?: string };
+  const payload = (job.payload ?? {}) as {
+    ledgerIds?: string[];
+    stockItemIds?: string[];
+    companyName?: string;
+  };
   const ledgerIds = body.ledgerIds?.length ? body.ledgerIds : payload.ledgerIds ?? [];
+  const stockItemIds = payload.stockItemIds ?? [];
   const ok = jobOk && isTallySuccess(body.tally);
 
-  if (!ok || !ledgerIds.length) return;
+  if (!ok || (!ledgerIds.length && !stockItemIds.length)) return;
 
-  await db.ledger.updateMany({
-    where: { id: { in: ledgerIds }, userId: job.userId, clientId: job.clientId },
-    data: { tallyCompanyId: job.tallyCompanyId, tallySyncedAt: new Date() },
-  });
+  const now = new Date();
+
+  if (ledgerIds.length) {
+    await db.ledger.updateMany({
+      where: { id: { in: ledgerIds }, userId: job.userId, clientId: job.clientId },
+      data: { tallyCompanyId: job.tallyCompanyId, tallySyncedAt: now },
+    });
+  }
+
+  if (stockItemIds.length) {
+    await db.stockItem.updateMany({
+      where: { id: { in: stockItemIds }, userId: job.userId, clientId: job.clientId },
+      data: { tallyCompanyId: job.tallyCompanyId, tallySyncedAt: now },
+    });
+  }
+
+  if (!ledgerIds.length) return;
 
   // Tally does not return GUIDs on import, so identity is only ever learnt by
   // reading back. Without this follow-up the ledgers we just created stay
@@ -593,6 +669,27 @@ async function applyVoucherResults(
   const voucherIds = sent.length ? sent : entries.map((e) => e.voucherId);
   const deleting = job.kind === "VOUCHER_DELETE";
   const now = new Date();
+
+  /**
+   * Which of these vouchers move stock — looked up only if it turns out to
+   * matter, which is when Tally rejects one and gives no reason.
+   *
+   * The happy path is the overwhelmingly common one, and it does not need this
+   * at all; a query on every push to serve an error message that usually never
+   * appears would be the wrong trade. Resolved once per batch and cached.
+   */
+  let stockVoucherIds: Set<string> | null = null;
+  const movesStock = async (id: string): Promise<boolean> => {
+    if (stockVoucherIds === null) {
+      const rows = await db.voucherLine.findMany({
+        where: { voucherId: { in: voucherIds }, stockItemId: { not: null } },
+        select: { voucherId: true },
+        distinct: ["voucherId"],
+      });
+      stockVoucherIds = new Set(rows.map((l) => l.voucherId));
+    }
+    return stockVoucherIds.has(id);
+  };
 
   let posted = 0;
   let failed = 0;
@@ -636,11 +733,18 @@ async function applyVoucherResults(
       });
     } else {
       failed += 1;
+      // A reason from Tally is always better than either of ours. Only when
+      // there is none does it matter whether the voucher carried stock, and
+      // only then is the lookup paid for.
+      let reason = rejectionReason(entry, transportError);
+      if (reason === BLANK_REJECTION_REASON && (await movesStock(voucherId))) {
+        reason = BLANK_REJECTION_REASON_INVENTORY;
+      }
       await db.voucherSync.updateMany({
         where: { voucherId, tallyCompanyId: job.tallyCompanyId ?? undefined },
         data: {
           state: "FAILED",
-          error: rejectionReason(entry, transportError),
+          error: reason,
           jobId: job.id,
           lastAttemptAt: now,
         },

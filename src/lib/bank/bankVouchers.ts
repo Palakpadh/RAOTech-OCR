@@ -559,6 +559,13 @@ async function persistBankVoucher(
           mappedVia: l.mappedVia,
           hsnCode: l.hsnCode,
           gstRate: l.gstRate,
+          // Always null for a bank row -- a statement line moves money, not
+          // stock -- but written through so the shape stays uniform.
+          stockItemId: l.stockItemId ?? null,
+          stockItemName: l.stockItemName ?? null,
+          quantity: l.quantity ?? null,
+          unit: l.unit ?? null,
+          rate: l.rate ?? null,
           sortOrder: l.sortOrder,
         })),
       },

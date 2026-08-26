@@ -35,6 +35,7 @@ model User {
   intakeLinks    IntakeLink[]
 
   tallyCompanies   TallyCompany[]
+  stockItems       StockItem[]
   excelUploads     ExcelUpload[]
   mappingTemplates MappingTemplate[]
   connectorDevices ConnectorDevice[]
@@ -67,6 +68,7 @@ model Client {
   members        ClientMember[]
   invoices       Invoice[]
   ledgers        Ledger[]
+  stockItems     StockItem[]
   ledgerMappings LedgerMapping[]
   mappingRules   MappingRule[]
   vouchers       Voucher[]
@@ -328,8 +330,66 @@ model VoucherLine {
   gstRate    Float?
   sortOrder  Int        @default(0)
 
+  /// The inventory allocation, when this line moves stock.
+  ///
+  /// A line carrying a `stockItemId` is emitted as an `ALLINVENTORYENTRIES.LIST`
+  /// with its accounting ledger nested inside as an `ACCOUNTINGALLOCATIONS.LIST`.
+  /// A line without one is a plain `ALLLEDGERENTRIES.LIST`, exactly as before.
+  /// The nesting is not cosmetic: emit the ledger both nested and as a sibling
+  /// and Tally accepts a voucher that debits the purchase account twice.
+  stockItemId   String?
+  stockItem     StockItem? @relation(fields: [stockItemId], references: [id], onDelete: SetNull)
+  /// Name at the time of posting, for the same reason ledgers keep one.
+  stockItemName String?
+  quantity      Float?
+  /// Unit as Tally spells it. Tally wants "10 Nos", not "10".
+  unit          String?
+  rate          Float?
+
   @@index([voucherId])
   @@index([ledgerId])
+  @@index([stockItemId])
+}
+
+/// A stock item master, mirrored from or pushed to a Tally company.
+///
+/// Deliberately thin. This is not an inventory system — Tally is, and the
+/// client's stock lives there. What we need is only enough to (a) create the
+/// master Tally refuses to invent, and (b) name it correctly on a voucher.
+/// Anything more (godowns, batches, reorder levels, valuation) belongs on the
+/// other side of the connector.
+model StockItem {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name String
+  /// Base unit as Tally spells it. Null blocks the Tally create rather than
+  /// guessing: a base unit cannot be altered once stock has moved against it.
+  unit    String?
+  hsnCode String?
+  gstRate Float?
+  alias   String?
+
+  openingQty  Float?
+  openingRate Float?
+
+  tallyCompanyId String?
+  tallyCompany   TallyCompany? @relation(fields: [tallyCompanyId], references: [id], onDelete: SetNull)
+  tallyGuid      String?
+  tallyName      String?
+  tallySyncedAt  DateTime?
+
+  lines VoucherLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, clientId, name])
+  @@unique([tallyCompanyId, tallyGuid])
+  @@index([userId, clientId])
 }
 
 model BankStatement {
@@ -718,6 +778,7 @@ model TallyCompany {
   educationMode Boolean            @default(false)
 
   ledgers      Ledger[]
+  stockItems   StockItem[]
   syncJobs     SyncJob[]
   voucherSyncs VoucherSync[]
 
@@ -988,6 +1049,11 @@ enum ExcelDocType {
   SALE
   SALE_RETURN
   JOURNAL
+
+  /// Bulk master upload. These produce `Ledger` / `StockItem` rows rather than
+  /// vouchers, and reuse the whole spreadsheet pipeline to get there.
+  LEDGER_MASTER
+  ITEM_MASTER
 }
 
 /// Their product calls this three different things — "With Item / Without Item",

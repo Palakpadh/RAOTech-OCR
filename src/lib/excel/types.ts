@@ -15,7 +15,16 @@ export type ExcelDocType =
   | "PURCHASE_RETURN"
   | "SALE"
   | "SALE_RETURN"
-  | "JOURNAL";
+  | "JOURNAL"
+  /**
+   * Bulk master upload. These two produce `Ledger` / `StockItem` rows rather
+   * than vouchers: same parser, same header detection, same review before
+   * commit, different thing at the end. They deliberately bypass
+   * `detectLayout` and `suggestMapping`, which are built around invoice fields
+   * a chart of accounts does not have.
+   */
+  | "LEDGER_MASTER"
+  | "ITEM_MASTER";
 
 /**
  * Whether a row carries stock-item detail.

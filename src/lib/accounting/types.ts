@@ -112,7 +112,27 @@ export interface ResolvedLedgers {
   discountLedgerName?: string;
 }
 
-export interface VoucherLineDraft {
+
+/**
+ * The stock a line moves, when it moves any.
+ *
+ * Optional everywhere on purpose: a bank payment, a journal and a services
+ * invoice have no inventory, and the great majority of what a CA firm keys in
+ * never will. A line carrying `stockItemName` is emitted to Tally as an
+ * inventory entry with its accounting ledger nested inside; a line without one
+ * is unchanged.
+ */
+export interface InventoryAllocation {
+  stockItemId?: string | null;
+  stockItemName?: string | null;
+  quantity?: number | null;
+  /** As Tally spells it: "Nos", "Kg". Tally wants "10 Nos", not "10". */
+  unit?: string | null;
+  /** Per-unit. Derived from amount / quantity when a sheet omits it. */
+  rate?: number | null;
+}
+
+export interface VoucherLineDraft extends InventoryAllocation {
   ledgerId: string | null;
   ledgerNameSnapshot: string | null;
   role: LineRole;
@@ -132,7 +152,7 @@ export interface VoucherLineDraft {
  * invite the bug where a negative credit quietly becomes a debit somewhere
  * downstream and the voucher still "balances".
  */
-export interface VoucherLineInput {
+export interface VoucherLineInput extends InventoryAllocation {
   role: LineRole;
   ledgerId: string | null;
   ledgerName: string | null;

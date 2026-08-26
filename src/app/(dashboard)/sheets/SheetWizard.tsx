@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import {
   DOC_TYPE_LABELS,
   FIELD_ORDER,
+  isMasterDocType,
   commitUpload,
   previewMapping,
   saveTemplate,
@@ -32,6 +33,7 @@ import type {
   SheetMapping,
 } from "@/lib/excel/types";
 import { LAYOUT_CONFIDENCE_FLOOR } from "@/lib/excel/types";
+import MasterPanel from "./MasterPanel";
 
 /**
  * Spreadsheet → vouchers, in four steps.
@@ -48,7 +50,7 @@ import { LAYOUT_CONFIDENCE_FLOOR } from "@/lib/excel/types";
  * Tally are all the existing pipeline.
  */
 
-type Step = "upload" | "fields" | "gst" | "ledgers" | "review";
+type Step = "upload" | "fields" | "gst" | "ledgers" | "review" | "masters";
 
 const STEPS: { id: Step; label: string }[] = [
   { id: "upload", label: "File" },
@@ -56,6 +58,19 @@ const STEPS: { id: Step; label: string }[] = [
   { id: "gst", label: "GST" },
   { id: "ledgers", label: "Ledgers" },
   { id: "review", label: "Review" },
+];
+
+/**
+ * A master sheet has two steps, not five.
+ *
+ * The middle three are entirely about tax — which columns hold taxable value,
+ * wide or long GST, which duty ledger each rate posts to — and a chart of
+ * accounts has none of it. Walking someone through three empty steps would
+ * read as "you forgot to fill something in".
+ */
+const MASTER_STEPS: { id: Step; label: string }[] = [
+  { id: "upload", label: "File" },
+  { id: "masters", label: "Columns & review" },
 ];
 
 interface LedgerOption {
@@ -88,6 +103,8 @@ export default function SheetWizard({
   const [progress, setProgress] = useState<string | null>(null);
 
   const headers = uploaded?.headers ?? [];
+  const isMaster = isMasterDocType(docType);
+  const visibleSteps = isMaster ? MASTER_STEPS : STEPS;
 
   const doUpload = useCallback(async () => {
     if (!file) return;
@@ -96,8 +113,14 @@ export default function SheetWizard({
     try {
       const res = await uploadSheet(file, docType, itemMode);
       setUploaded(res);
-      setMapping(res.suggestedMapping);
-      setStep("fields");
+      // A master sheet skips straight to its own panel: there is no invoice
+      // mapping to hold, and the server did not compute one.
+      if (isMasterDocType(docType)) {
+        setStep("masters");
+      } else {
+        setMapping(res.suggestedMapping);
+        setStep("fields");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -215,9 +238,9 @@ export default function SheetWizard({
       </header>
 
       <ol className="mb-8 flex flex-wrap gap-2 text-sm">
-        {STEPS.map((s, i) => {
+        {visibleSteps.map((s, i) => {
           const active = s.id === step;
-          const done = STEPS.findIndex((x) => x.id === step) > i;
+          const done = visibleSteps.findIndex((x) => x.id === step) > i;
           return (
             <li
               key={s.id}
@@ -260,7 +283,7 @@ export default function SheetWizard({
                 ))}
               </select>
             </div>
-            <div>
+            <div className={isMaster ? "hidden" : undefined}>
               <Label htmlFor="itemMode">Does the sheet have item detail?</Label>
               <select
                 id="itemMode"
@@ -308,12 +331,18 @@ export default function SheetWizard({
               value={`Row ${uploaded.headerRowIndex + 1}`}
               hint={uploaded.droppedRows ? `${uploaded.droppedRows} summary rows skipped` : undefined}
             />
-            <Stat
-              label="Tax layout"
-              value={uploaded.layout.taxLayout === "WIDE" ? "Column per rate" : "Fixed tax columns"}
-              hint={uploaded.layout.reason}
-              warn={uploaded.layout.confidence < LAYOUT_CONFIDENCE_FLOOR}
-            />
+            {/* Absent on a master sheet: layout detection is about GST columns,
+                and a chart of accounts has none. */}
+            {uploaded.layout && (
+              <Stat
+                label="Tax layout"
+                value={
+                  uploaded.layout.taxLayout === "WIDE" ? "Column per rate" : "Fixed tax columns"
+                }
+                hint={uploaded.layout.reason}
+                warn={uploaded.layout.confidence < LAYOUT_CONFIDENCE_FLOOR}
+              />
+            )}
           </div>
 
           {uploaded.templates.length > 0 && (
@@ -332,6 +361,16 @@ export default function SheetWizard({
             </div>
           )}
         </>
+      )}
+
+      {step === "masters" && uploaded && (
+        <MasterPanel
+          uploadId={uploaded.upload.id}
+          kind={docType as "LEDGER_MASTER" | "ITEM_MASTER"}
+          headers={headers}
+          initialMapping={uploaded.masterMapping ?? null}
+          onDone={(count) => setCommitted({ count })}
+        />
       )}
 
       {step === "fields" && mapping && (

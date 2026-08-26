@@ -60,6 +60,15 @@ export function buildVoucherFromLines(
       mappedVia: l.mappedVia ?? null,
       hsnCode: l.hsnCode ?? null,
       gstRate: l.gstRate ?? null,
+      // Carried through untouched. The rate is derived here only when a sheet
+      // gave a quantity and no rate, so Tally does not display a zero.
+      stockItemId: l.stockItemId ?? null,
+      stockItemName: l.stockItemName ?? null,
+      quantity: l.quantity ?? null,
+      unit: l.unit ?? null,
+      rate:
+        l.rate ??
+        (l.quantity && l.quantity !== 0 ? amount / l.quantity : null),
       sortOrder: sort++,
     });
   }

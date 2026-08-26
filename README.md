@@ -19,6 +19,11 @@ month, and it is nearly all retyping. This does the retyping.
 - **Bank statements → Payment / Receipt / Contra.** An auditable rule list plus
   a memory of what you chose last month, with the bank side bound once per
   statement rather than per row.
+- **Bulk master upload.** A chart of accounts or an item list as a spreadsheet,
+  mapped and reviewed before anything is written.
+- **Stock, where the client keeps it.** An item line becomes a real inventory
+  allocation so the quantities in Tally move with the money — switched on by
+  having the masters, not by a setting.
 - **GSTR-2B reconciliation** against the purchases in the books.
 - **Posting into TallyPrime** over its HTTP-XML gateway, through a desktop agent
   that polls outward — the cloud never dials into a client's machine.
