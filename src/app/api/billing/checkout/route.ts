@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { razorpay } from "@/lib/razorpay";
+import { getRazorpayInstance } from "@/lib/razorpay";
 import crypto from "crypto";
 
 const INDIVIDUAL_MONTHLY_PRICE = 1499;
@@ -24,6 +24,8 @@ export async function POST(req: Request) {
     // Total in INR (for yearly billing, multiply by 12 months)
     const totalINR = unitPrice * seatCount * (isYearly ? 12 : 1);
     const amountInPaise = totalINR * 100;
+
+    const razorpay = getRazorpayInstance();
 
     // Create Order with Razorpay
     const order = await razorpay.orders.create({
