@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Send, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,15 @@ function formatTime(d: Date) {
 }
 
 export default function ChatPage() {
+  const router = useRouter();
+
+  // Payment gate — redirect to pricing if user hasn't paid
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("raotech_paid") !== "true") {
+      router.replace("/pricing?gate=true&returnTo=/chat");
+    }
+  }, [router]);
+
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hello! I am RAO AI. Ask about this client's ITC, drafts, vendors, or reconciliation." }
   ]);

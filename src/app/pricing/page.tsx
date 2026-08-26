@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -178,6 +178,9 @@ function formatINR(value: number) {
 
 export default function PricingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isGate = searchParams.get("gate") === "true";
+  const returnTo = searchParams.get("returnTo") || "/dashboard";
   const [billing, setBilling] = useState<Billing>("monthly");
   const [numUsers, setNumUsers] = useState("");
   const [enterpriseError, setEnterpriseError] = useState(false);
@@ -201,7 +204,8 @@ export default function PricingPage() {
 
   function handleChooseIndividual() {
     void goToPaymentGateway("individual", { billing }, () => {
-      router.push("/dashboard");
+      localStorage.setItem("raotech_paid", "true");
+      router.push(isGate ? returnTo : "/dashboard");
     });
   }
 
@@ -212,13 +216,15 @@ export default function PricingPage() {
     }
     setEnterpriseError(false);
     void goToPaymentGateway("enterprise", { billing, users: parsedUsers }, () => {
-      router.push(`/enterprise/invite?seats=${parsedUsers}`);
+      localStorage.setItem("raotech_paid", "true");
+      router.push(isGate ? returnTo : `/enterprise/invite?seats=${parsedUsers}`);
     });
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
+      {/* Header — hidden in gate/paywall mode */}
+      {!isGate ? (
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center px-6 lg:px-10">
           <Link href="/" className="text-lg font-bold tracking-tight">
@@ -261,6 +267,20 @@ export default function PricingPage() {
           </div>
         </div>
       </header>
+      ) : (
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-[1440px] items-center px-6 lg:px-10">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Back
+          </button>
+          <span className="mx-auto text-lg font-bold tracking-tight">Choose a Plan</span>
+          <div className="w-16" />
+        </div>
+      </header>
+      )}
 
       <main>
         {/* Hero */}

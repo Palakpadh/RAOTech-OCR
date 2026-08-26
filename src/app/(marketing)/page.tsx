@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 
@@ -323,12 +324,17 @@ export default function LandingPage() {
             </a>
           </nav>
 
-          <div className="ml-auto">
-           <Link href="/pricing">
-  <Button className="rounded-none bg-primary text-primary-foreground hover:bg-primary/90">
-    Login / Register
-  </Button>
-</Link>
+          <div className="ml-auto flex items-center gap-3">
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+              <Button variant="outline" className="rounded-none border-border">
+                Login
+              </Button>
+            </SignInButton>
+            <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+              <Button className="rounded-none bg-primary text-primary-foreground hover:bg-primary/90">
+                Register
+              </Button>
+            </SignUpButton>
           </div>
         </div>
       </header>
@@ -806,12 +812,13 @@ export default function LandingPage() {
               </li>
 
               <li>
-                <Link
-                  href="/sign-in"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Sign in
-                </Link>
+                <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+                  <button
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Sign in
+                  </button>
+                </SignInButton>
               </li>
             </ul>
           </div>

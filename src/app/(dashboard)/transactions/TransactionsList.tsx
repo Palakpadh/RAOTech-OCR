@@ -206,6 +206,12 @@ export default function TransactionsList({
   }
 
   async function exportTally(ids?: string[]) {
+    // Payment gate — redirect to pricing if user hasn't paid
+    if (typeof window !== "undefined" && localStorage.getItem("raotech_paid") !== "true") {
+      router.push("/pricing?gate=true&returnTo=/transactions");
+      return;
+    }
+
     const startedAt = performance.now();
 
     trace("export-tally:start", {
