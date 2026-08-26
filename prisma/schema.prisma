@@ -34,6 +34,11 @@ model User {
   tasks          Task[]          @relation("AssignedTasks")
   intakeLinks    IntakeLink[]
 
+  ownedOrgs       Organization[]   @relation("OrgOwner")
+  orgMemberships  OrgMember[]
+  sentInvites     TeamInvitation[] @relation("SentInvitations")
+  acceptedInvites TeamInvitation[] @relation("AcceptedInvitations")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -563,3 +568,119 @@ enum InvoiceStatus {
   PROCESSED
   FAILED
 }
+
+// ── BILLING & SUBSCRIPTIONS ──
+
+model Organization {
+  id           String       @id @default(uuid())
+  name         String
+  slug         String       @unique
+  ownerId      String
+  owner        User         @relation("OrgOwner", fields: [ownerId], references: [id])
+
+  plan         OrgPlan      @default(INDIVIDUAL)
+  billingCycle BillingCycle @default(MONTHLY)
+  maxSeats     Int          @default(1)
+
+  subscriptions Subscription[]
+  members       OrgMember[]
+  invitations   TeamInvitation[]
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([ownerId])
+}
+
+model Subscription {
+  id                String       @id @default(uuid())
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  razorpayOrderId   String?      @unique
+  razorpayPaymentId String?      @unique
+  razorpaySignature String?
+
+  plan              OrgPlan
+  billingCycle      BillingCycle
+  seatCount         Int          @default(1)
+  pricePerSeat      Int
+  totalAmount       Int
+  currency          String       @default("INR")
+
+  status            SubStatus    @default(PENDING)
+  paidAt            DateTime?
+  expiresAt         DateTime?
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([orgId, status])
+}
+
+// ── TEAM INVITATIONS ──
+
+model TeamInvitation {
+  id           String       @id @default(uuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  email        String
+  role         MemberRole   @default(CLERK)
+  token        String       @unique @default(uuid())
+
+  status       InviteStatus @default(PENDING)
+  invitedById  String
+  invitedBy    User         @relation("SentInvitations", fields: [invitedById], references: [id])
+
+  acceptedById String?
+  acceptedBy   User?        @relation("AcceptedInvitations", fields: [acceptedById], references: [id])
+  acceptedAt   DateTime?
+  expiresAt    DateTime
+
+  createdAt    DateTime     @default(now())
+
+  @@unique([orgId, email])
+  @@index([token])
+  @@index([orgId, status])
+}
+
+model OrgMember {
+  id       String       @id @default(uuid())
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     MemberRole   @default(CLERK)
+
+  joinedAt DateTime     @default(now())
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+enum OrgPlan {
+  INDIVIDUAL
+  ENTERPRISE
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum SubStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  FAILED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+

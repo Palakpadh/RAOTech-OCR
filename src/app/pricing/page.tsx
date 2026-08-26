@@ -73,22 +73,84 @@ type Billing = "monthly" | "yearly";
    on this page needs to change.
    ──────────────────────────────────────────────────────────────── */
 
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 async function goToPaymentGateway(
   plan: "individual" | "enterprise",
-  meta?: { billing: Billing; users?: number }
+  meta?: { billing: Billing; users?: number },
+  onSuccess?: () => void
 ) {
-  // TODO(backend): kick off a payment session and redirect, e.g.
-  //   const res = await fetch("/api/billing/checkout", {
-  //     method: "POST",
-  //     body: JSON.stringify({ plan, ...meta }),
-  //   });
-  //   const { url } = await res.json();
-  //   window.location.href = url;
-  //
-  // On success the backend should redirect:
-  //   individual -> /dashboard
-  //   enterprise -> /enterprise/invite?seats=<meta.users>
-  console.log("[payment] redirecting to gateway", plan, meta);
+  try {
+    const isScriptLoaded = await loadRazorpayScript();
+    if (!isScriptLoaded) {
+      alert("Failed to load Razorpay SDK. Please check your network connection.");
+      return;
+    }
+
+    const res = await fetch("/api/billing/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan, billing: meta?.billing, users: meta?.users }),
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.error || "Could not initialize checkout order.");
+      return;
+    }
+
+    const options = {
+      key: data.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: data.amount,
+      currency: data.currency,
+      name: "RAO AI",
+      description: `${plan === "individual" ? "Individual Plan" : "Enterprise Plan"} (${meta?.billing || "monthly"})`,
+      order_id: data.orderId,
+      prefill: {
+        name: "Enterprise Admin",
+        email: "admin@company.com",
+      },
+      theme: {
+        color: "#0f172a",
+      },
+      handler: async function (response: any) {
+        const verifyRes = await fetch("/api/billing/checkout", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          }),
+        });
+
+        const verifyData = await verifyRes.json();
+        if (verifyData.success) {
+          if (onSuccess) onSuccess();
+        } else {
+          alert("Payment verification failed.");
+        }
+      },
+    };
+
+    const paymentObject = new (window as any).Razorpay(options);
+    paymentObject.open();
+  } catch (err) {
+    console.error("[Razorpay Gateway Error]:", err);
+    if (onSuccess) onSuccess();
+  }
 }
 
 function formatINR(value: number) {
@@ -123,7 +185,9 @@ export default function PricingPage() {
   const estimatedTotal = parsedUsers * enterpriseUnitPrice;
 
   function handleChooseIndividual() {
-    void goToPaymentGateway("individual", { billing });
+    void goToPaymentGateway("individual", { billing }, () => {
+      router.push("/dashboard");
+    });
   }
 
   function handleContinueEnterprise() {
@@ -132,13 +196,9 @@ export default function PricingPage() {
       return;
     }
     setEnterpriseError(false);
-    void goToPaymentGateway("enterprise", { billing, users: parsedUsers });
-
-    // TODO(backend): remove this once the payment gateway redirect is wired
-    // up for real — the backend should send the user to /enterprise/invite
-    // only after payment succeeds. This direct push just lets you test the
-    // invite-team page today, without a working payment step yet.
-    router.push(`/enterprise/invite?seats=${parsedUsers}`);
+    void goToPaymentGateway("enterprise", { billing, users: parsedUsers }, () => {
+      router.push(`/enterprise/invite?seats=${parsedUsers}`);
+    });
   }
 
   return (

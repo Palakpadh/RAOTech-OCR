@@ -60,15 +60,18 @@ function splitEmails(raw: string): string[] {
    ──────────────────────────────────────────────────────────────── */
 
 async function sendInvitationsToBackend(emails: string[]) {
-  // TODO(backend): POST the email list, e.g.
-  //   await fetch("/api/enterprise/invitations", {
-  //     method: "POST",
-  //     body: JSON.stringify({ emails }),
-  //   });
-  // Backend sends the invite emails and provisions employee accounts;
-  // employees can then sign in directly with their invited address.
-  console.log("[invite] sending invitations", emails);
-  return { ok: true };
+  try {
+    const res = await fetch("/api/enterprise/invitations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emails }),
+    });
+    const data = await res.json();
+    return { ok: data.ok !== false };
+  } catch (error) {
+    console.error("[Invite API error]:", error);
+    return { ok: false };
+  }
 }
 
 function InviteTeamPageInner() {
