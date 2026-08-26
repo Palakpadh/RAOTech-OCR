@@ -107,6 +107,13 @@ async function goToPaymentGateway(
       body: JSON.stringify({ plan, billing: meta?.billing, users: meta?.users }),
     });
 
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("[Checkout API Error]:", res.status, text.slice(0, 200));
+      alert(`Checkout failed (${res.status}). Please try again or contact support.`);
+      return;
+    }
+
     const data = await res.json();
     if (!data.success) {
       alert(data.error || "Could not initialize checkout order.");
