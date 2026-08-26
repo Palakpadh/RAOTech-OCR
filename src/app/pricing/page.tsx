@@ -97,7 +97,7 @@ async function goToPaymentGateway(
   try {
     const isScriptLoaded = await loadRazorpayScript();
     if (!isScriptLoaded) {
-      alert("Failed to load Razorpay SDK. Please check your network connection.");
+      alert("Failed to load Razorpay SDK. Please check your internet connection.");
       return;
     }
 
@@ -113,16 +113,22 @@ async function goToPaymentGateway(
       return;
     }
 
+    const key = data.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    if (!key) {
+      alert("Razorpay Key ID is missing. Please check your Vercel Environment Variables.");
+      return;
+    }
+
     const options = {
-      key: data.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      key,
       amount: data.amount,
       currency: data.currency,
       name: "RAO AI",
       description: `${plan === "individual" ? "Individual Plan" : "Enterprise Plan"} (${meta?.billing || "monthly"})`,
       order_id: data.orderId,
       prefill: {
-        name: "Enterprise Admin",
-        email: "admin@company.com",
+        name: "Customer",
+        email: "customer@example.com",
       },
       theme: {
         color: "#0f172a",
@@ -149,9 +155,9 @@ async function goToPaymentGateway(
 
     const paymentObject = new (window as any).Razorpay(options);
     paymentObject.open();
-  } catch (err) {
+  } catch (err: any) {
     console.error("[Razorpay Gateway Error]:", err);
-    if (onSuccess) onSuccess();
+    alert("Checkout error: " + (err?.message || "Failed to initiate payment"));
   }
 }
 
