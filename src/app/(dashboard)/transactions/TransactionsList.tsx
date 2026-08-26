@@ -41,6 +41,7 @@ interface VoucherRow {
   isDuplicate?: boolean;
   confidence?: number | null;
 }
+
 interface BankRow {
   id: string;
   fileName: string;
@@ -52,7 +53,19 @@ interface BankRow {
   totalOut: number;
 }
 
-const money = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
+const money = (n: number) =>
+  `₹${(n || 0).toLocaleString("en-IN")}`;
+
+function trace(event: string, meta?: Record<string, unknown>) {
+  if (process.env.NEXT_PUBLIC_TRACE_LOGS === "0") return;
+
+  if (meta) {
+    console.log(`[trace][transactions-ui] ${event}`, meta);
+    return;
+  }
+
+  console.log(`[trace][transactions-ui] ${event}`);
+}
 
 function StatusChip({
   status,
@@ -65,19 +78,55 @@ function StatusChip({
   isDuplicate?: boolean;
   confidence?: number | null;
 }) {
-  if (isDuplicate)
-    return <span className="px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700">Duplicate</span>;
-  if (status === "EXPORTED_DEMO")
-    return <span className="px-2 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-700">Exported XML</span>;
-  if (status === "SYNCED" || status === "APPROVED" || status === "POSTED")
-    return <span className="px-2 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-      {status === "APPROVED" ? "Approved" : "Synced"}
-    </span>;
-  if (unmapped)
-    return <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">Needs ledger</span>;
-  if (confidence != null && confidence < 0.7)
-    return <span className="px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700">Low conf.</span>;
-  return <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">Ready</span>;
+  if (isDuplicate) {
+    return (
+      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/20">
+        Duplicate
+      </span>
+    );
+  }
+
+  if (status === "EXPORTED_DEMO") {
+    return (
+      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/20">
+        Exported XML
+      </span>
+    );
+  }
+
+  if (
+    status === "SYNCED" ||
+    status === "APPROVED" ||
+    status === "POSTED"
+  ) {
+    return (
+      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+        {status === "APPROVED" ? "Approved" : "Synced"}
+      </span>
+    );
+  }
+
+  if (unmapped) {
+    return (
+      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/20">
+        Needs ledger
+      </span>
+    );
+  }
+
+  if (confidence != null && confidence < 0.7) {
+    return (
+      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/20">
+        Low conf.
+      </span>
+    );
+  }
+
+  return (
+    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">
+      Ready
+    </span>
+  );
 }
 
 export default function TransactionsList({
@@ -88,6 +137,7 @@ export default function TransactionsList({
   statements: BankRow[];
 }) {
   const router = useRouter();
+
   const [tab, setTab] = useState<"invoices" | "bank">("invoices");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -135,26 +185,56 @@ export default function TransactionsList({
   function toggle(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
       return next;
     });
   }
 
   function toggleAllReady() {
-    const ready = filtered.filter((v) => !v.hasUnmapped && v.status === "DRAFT").map((v) => v.id);
+    const ready = filtered
+      .filter(
+        (v) => !v.hasUnmapped && v.status === "DRAFT"
+      )
+      .map((v) => v.id);
+
     setSelected(new Set(ready));
   }
 
   async function bulkApprove() {
     if (!selected.size) return;
+
+    const startedAt = performance.now();
+
+    trace("bulk-approve:start", {
+      selectedCount: selected.size,
+    });
+
     setBusy(true);
+
     try {
       await fetch("/api/vouchers/bulk-approve", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voucherIds: [...selected] }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          voucherIds: [...selected],
+        }),
       });
+
+      trace("bulk-approve:done", {
+        selectedCount: selected.size,
+        durationMs: Number(
+          (performance.now() - startedAt).toFixed(2)
+        ),
+      });
+
       setSelected(new Set());
       router.refresh();
     } finally {
@@ -163,13 +243,23 @@ export default function TransactionsList({
   }
 
   async function exportTally(ids?: string[]) {
+    const startedAt = performance.now();
+
+    trace("export-tally:start", {
+      selectedCount: ids?.length ?? 0,
+    });
+
     setBusy(true);
     setBlocked(null);
     try {
       const res = await fetch("/api/export/tally", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ids?.length ? { voucherIds: ids } : {}),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+          ids?.length ? { voucherIds: ids } : {}
+        ),
       });
 
       // 422 means preflight caught something Tally would reject. Show exactly
@@ -196,11 +286,17 @@ export default function TransactionsList({
       const warnings = Number(res.headers.get("X-Export-Warnings") || 0);
       const count = Number(res.headers.get("X-Export-Count") || 0);
       const blob = await res.blob();
+
       const url = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
       a.href = url;
-      a.download = `tally_export_${new Date().toISOString().slice(0, 10)}.xml`;
+      a.download = `tally_export_${new Date()
+        .toISOString()
+        .slice(0, 10)}.xml`;
+
       a.click();
+
       URL.revokeObjectURL(url);
       toast(
         warnings
@@ -208,6 +304,14 @@ export default function TransactionsList({
           : `Exported ${count} voucher(s). Import the file in Tally.`,
         warnings ? "info" : "success"
       );
+
+      trace("export-tally:done", {
+        selectedCount: ids?.length ?? 0,
+        durationMs: Number(
+          (performance.now() - startedAt).toFixed(2)
+        ),
+      });
+
       router.refresh();
     } finally {
       setBusy(false);
@@ -215,31 +319,64 @@ export default function TransactionsList({
   }
 
   return (
-    <div className="p-6 md:p-10 space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="min-h-full bg-[var(--spx-canvas)] text-[var(--spx-text)] p-6 md:p-10 space-y-6">
+
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-          <p className="text-gray-500 text-sm mt-1">Map ledgers, approve, and post to Tally</p>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--spx-text)]">
+            Transactions
+          </h1>
+
+          <p className="text-[var(--spx-muted)] text-sm mt-1">
+            Map ledgers, approve, and export Tally XML
+          </p>
         </div>
+
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={toggleAllReady}>
-            <CheckSquare className="mr-2 h-4 w-4" /> Select ready
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleAllReady}
+            className="bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-text-secondary)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            Select ready
           </Button>
-          <Button size="sm" variant="outline" disabled={!selected.size || busy} onClick={bulkApprove}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+
+          <Button
+            size="sm"
+            disabled={!selected.size || busy}
+            onClick={bulkApprove}
+            className="bg-white text-black hover:bg-zinc-200"
+          >
+            {busy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+
             Approve selected ({selected.size})
           </Button>
+
           {deletable.length > 0 && (
-            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => setConfirmDelete(deletable)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirmDelete(deletable)}
+              className="border-red-500/30 bg-[var(--spx-input-bg)] text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete From Tally ({deletable.length})
             </Button>
           )}
           <Button
             size="sm"
-            variant="outline"
             disabled={busy}
-            onClick={() => exportTally(selected.size ? [...selected] : undefined)}
+            onClick={() =>
+              exportTally(
+                selected.size ? [...selected] : undefined
+              )
+            }
+            className="bg-green-600 hover:bg-green-500 text-white"
           >
             <Download className="mr-2 h-4 w-4" />
             Export XML
@@ -322,26 +459,65 @@ export default function TransactionsList({
 
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setTab("invoices")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === "invoices" ? "bg-gray-900 text-white" : "bg-white border text-gray-600"}`}
+          onClick={() => {
+            trace("tab:change", {
+              from: tab,
+              to: "invoices",
+            });
+
+            setTab("invoices");
+          }}
+          className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
+            tab === "invoices"
+              ? "bg-white text-black border-white"
+              : "bg-[var(--spx-input-bg)] text-[var(--spx-muted)] border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
+          }`}
         >
           Invoices ({vouchers.length})
         </button>
+
         <button
-          onClick={() => setTab("bank")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === "bank" ? "bg-gray-900 text-white" : "bg-white border text-gray-600"}`}
+          onClick={() => {
+            trace("tab:change", {
+              from: tab,
+              to: "bank",
+            });
+
+            setTab("bank");
+          }}
+          className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
+            tab === "bank"
+              ? "bg-white text-black border-white"
+              : "bg-[var(--spx-input-bg)] text-[var(--spx-muted)] border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
+          }`}
         >
           Bank Statements ({statements.length})
         </button>
+
         {tab === "invoices" && (
           <>
             {(["all", "ready", "low"] as const).map((f) => (
               <button
                 key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium ${filter === f ? "bg-blue-600 text-white" : "bg-white border text-gray-500"}`}
+                onClick={() => {
+                  trace("filter:change", {
+                    from: filter,
+                    to: f,
+                  });
+
+                  setFilter(f);
+                }}
+                className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                  filter === f
+                    ? "bg-gray-300 text-gray-900 border-gray-400"
+                    : "bg-[var(--spx-input-bg)] text-[var(--spx-muted)] border-[var(--spx-border)] hover:text-[var(--spx-text)]"
+                }`}
               >
-                {f === "all" ? "All" : f === "ready" ? "Ready" : "Needs attention"}
+                {f === "all"
+                  ? "All"
+                  : f === "ready"
+                  ? "Ready"
+                  : "Needs attention"}
               </button>
             ))}
             <button
@@ -360,50 +536,82 @@ export default function TransactionsList({
         )}
       </div>
 
+      {/* Invoices */}
       {tab === "invoices" ? (
-        <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
+        <div className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl overflow-hidden">
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-gray-500 bg-gray-50 uppercase text-xs">
+
+              <thead className="text-[var(--spx-muted)] bg-[var(--spx-input-bg)] uppercase text-xs border-b border-[var(--spx-border)]">
                 <tr>
                   <th className="px-4 py-3 w-10"></th>
                   <th className="px-4 py-3">Vendor</th>
                   <th className="px-4 py-3">Invoice #</th>
                   <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3 text-right">Amount</th>
+                  <th className="px-4 py-3 text-right">
+                    Amount
+                  </th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Tally</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
+
               <tbody>
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                    <td
+                      colSpan={8}
+                      className="px-4 py-12 text-center text-zinc-600"
+                    >
                       {failedOnly || hideSynced
                         ? "No rows match these filters."
                         : "No invoices yet. Upload to create vouchers."}
                     </td>
                   </tr>
                 )}
+
                 {filtered.map((v) => (
-                  <tr key={v.id} className="border-b hover:bg-gray-50 transition group">
+                  <tr
+                    key={v.id}
+                    className="border-b border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)]/70 transition group"
+                  >
                     <td className="px-4 py-3">
-                      {/* Posted rows stay selectable: removing one from Tally's
-                          books is done from this table too. */}
-                      <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggle(v.id)} />
+                      <input
+                        type="checkbox"
+                        checked={selected.has(v.id)}
+                        onChange={() => toggle(v.id)}
+                        disabled={
+                          v.status !== "DRAFT" &&
+                          v.status !== "APPROVED"
+                        }
+                        className="rounded border-zinc-700 bg-zinc-900"
+                      />
                     </td>
+
                     <td className="px-4 py-3 font-medium">
                       <Link
                         href={`/vouchers/${v.id}`}
-                        className="flex items-center gap-2 text-blue-600 group-hover:text-blue-800"
+                        className="flex items-center gap-2 text-[var(--spx-text)] group-hover:text-[var(--spx-text)]"
                       >
-                        <FileText className="h-4 w-4" /> {v.vendor}
+                        <FileText className="h-4 w-4 text-[var(--spx-muted)]" />
+                        {v.vendor}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{v.invoiceNumber}</td>
-                    <td className="px-4 py-3 text-gray-600">{v.type}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{money(v.amount)}</td>
+
+                    <td className="px-4 py-3 text-[var(--spx-muted)]">
+                      {v.invoiceNumber}
+                    </td>
+
+                    <td className="px-4 py-3 text-[var(--spx-muted)]">
+                      {v.type}
+                    </td>
+
+                    <td className="px-4 py-3 text-right font-semibold text-[var(--spx-text)]">
+                      {money(v.amount)}
+                    </td>
+
                     <td className="px-4 py-3">
                       <StatusChip
                         status={v.status}
@@ -418,69 +626,109 @@ export default function TransactionsList({
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/vouchers/${v.id}`}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                        className="inline-flex items-center gap-1 text-[var(--spx-muted)] hover:text-[var(--spx-text)]"
                       >
-                        Map <ArrowRight className="h-3.5 w-3.5" />
+                        Map
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         </div>
+
       ) : (
-        <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
+
+        /* Bank Statements */
+        <div className="border border-[var(--spx-border)] rounded-xl bg-[var(--spx-card)] shadow-xl overflow-hidden">
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-gray-500 bg-gray-50 uppercase text-xs">
+
+              <thead className="text-[var(--spx-muted)] bg-[var(--spx-input-bg)] uppercase text-xs border-b border-[var(--spx-border)]">
                 <tr>
                   <th className="px-4 py-3">Bank</th>
                   <th className="px-4 py-3">File</th>
-                  <th className="px-4 py-3 text-center">Txns</th>
-                  <th className="px-4 py-3 text-right">In / Out</th>
+                  <th className="px-4 py-3 text-center">
+                    Txns
+                  </th>
+                  <th className="px-4 py-3 text-right">
+                    In / Out
+                  </th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
+
               <tbody>
                 {statements.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
-                      No bank statements yet. Upload one from the Upload page.
+                    <td
+                      colSpan={6}
+                      className="px-4 py-12 text-center text-zinc-600"
+                    >
+                      No bank statements yet. Upload one from
+                      the Upload page.
                     </td>
                   </tr>
                 )}
+
                 {statements.map((s) => (
-                  <tr key={s.id} className="border-b hover:bg-gray-50 transition group">
+                  <tr
+                    key={s.id}
+                    className="border-b border-[var(--spx-border)] hover:bg-[var(--spx-card-hover)]/70 transition group"
+                  >
                     <td className="px-4 py-3 font-medium">
                       <Link
                         href={`/bank/${s.id}`}
-                        className="flex items-center gap-2 text-amber-700 group-hover:text-amber-900"
+                        className="flex items-center gap-2 text-[var(--spx-text)] hover:text-[var(--spx-text)]"
                       >
-                        <Landmark className="h-4 w-4" /> {s.bankName || "Bank Statement"}
+                        <Landmark className="h-4 w-4 text-[var(--spx-muted)]" />
+                        {s.bankName || "Bank Statement"}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 truncate max-w-[160px]">{s.fileName}</td>
-                    <td className="px-4 py-3 text-center text-gray-600">{s.txnCount}</td>
-                    <td className="px-4 py-3 text-right text-gray-600 whitespace-nowrap">
-                      <span className="text-green-600">{money(s.totalIn)}</span> /{" "}
-                      <span className="text-red-600">{money(s.totalOut)}</span>
+
+                    <td className="px-4 py-3 text-[var(--spx-muted)] truncate max-w-[160px]">
+                      {s.fileName}
                     </td>
+
+                    <td className="px-4 py-3 text-center text-[var(--spx-muted)]">
+                      {s.txnCount}
+                    </td>
+
+                    <td className="px-4 py-3 text-right text-[var(--spx-muted)] whitespace-nowrap">
+                      <span className="text-emerald-400">
+                        {money(s.totalIn)}
+                      </span>{" "}
+                      /{" "}
+                      <span className="text-red-400">
+                        {money(s.totalOut)}
+                      </span>
+                    </td>
+
                     <td className="px-4 py-3">
-                      <StatusChip status={s.status} unmapped={s.unmapped > 0} />
+                      <StatusChip
+                        status={s.status}
+                        unmapped={s.unmapped > 0}
+                      />
                     </td>
+
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/bank/${s.id}`}
-                        className="inline-flex items-center gap-1 text-amber-700 hover:underline"
+                        className="inline-flex items-center gap-1 text-[var(--spx-muted)] hover:text-[var(--spx-text)]"
                       >
-                        Map <ArrowRight className="h-3.5 w-3.5" />
+                        Map
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         </div>

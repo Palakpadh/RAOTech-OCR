@@ -43,73 +43,193 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ════════════════════════════════════════════════════
+   DARK THEME (Default) — SpaceX Mission Control
+   ════════════════════════════════════════════════════ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0px;
+  --background: #0b0d10;
+  --foreground: #e8e8ed;
+  --card: #0f1115;
+  --card-foreground: #e8e8ed;
+  --popover: #0f1115;
+  --popover-foreground: #e8e8ed;
+  --primary: #e8e8ed;
+  --primary-foreground: #0b0d10;
+  --secondary: #161920;
+  --secondary-foreground: #e8e8ed;
+  --muted: #161920;
+  --muted-foreground: #6b6f78;
+  --accent: #1c1f28;
+  --accent-foreground: #e8e8ed;
+  --destructive: #e53e3e;
+  --border: #2a2d35;
+  --input: #2a2d35;
+  --ring: #6b6f78;
+  --chart-1: #e8e8ed;
+  --chart-2: #2a2d35;
+  --chart-3: #6b6f78;
+  --chart-4: #e8e8ed;
+  --chart-5: #e53e3e;
+  --sidebar: #0b0d10;
+  --sidebar-foreground: #e8e8ed;
+  --sidebar-primary: #e8e8ed;
+  --sidebar-primary-foreground: #0b0d10;
+  --sidebar-accent: #161920;
+  --sidebar-accent-foreground: #e8e8ed;
+  --sidebar-border: #2a2d35;
+  --sidebar-ring: #6b6f78;
+
+  /* SpaceX semantic tokens (used in inline styles) */
+  --spx-canvas: #08090c;
+  --spx-card: #111419;
+  --spx-card-hover: #191d26;
+  --spx-border: #252a36;
+  --spx-border-subtle: rgba(37, 42, 54, 0.5);
+  --spx-text: #eaeaef;
+  --spx-text-secondary: #a2a3ab;
+  --spx-muted: #6d7179;
+  --spx-icon-dim: #3c4048;
+  --spx-input-bg: #151821;
+  --spx-active-bg: rgba(255, 255, 255, 0.07);
+  --spx-hover-bg: rgba(255, 255, 255, 0.04);
+  --spx-overlay: rgba(0, 0, 0, 0.75);
+  --spx-topbar-bg: rgba(18, 21, 30, 0.94);
+  --spx-active-border: #ffffff;
+  --spx-scrollbar-track: #08090c;
+  --spx-scrollbar-thumb: #252a36;
+  --spx-scrollbar-hover: #6d7179;
+  --spx-sidebar-bg: #ffffff;
+  --spx-sidebar-text: #1a1a1a;
+  --spx-sidebar-muted: #6b7280;
+  --spx-sidebar-border: #e5e7eb;
+  --spx-sidebar-hover-bg: rgba(0, 0, 0, 0.04);
+  --spx-sidebar-active-bg: rgba(0, 0, 0, 0.07);
+  --spx-sidebar-active-border: #1a1a1a;
+  --spx-sidebar-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
+  --spx-topbar-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  --spx-table-header-bg: #13161e;
 }
 
+/* ════════════════════════════════════════════════════
+   LIGHT THEME — Clean Professional
+   ════════════════════════════════════════════════════ */
+.light {
+  --background: #f5f5f7;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #1a1a1a;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f1f3;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f0f1f3;
+  --muted-foreground: #6b7280;
+  --accent: #e8eaed;
+  --accent-foreground: #1a1a1a;
+  --destructive: #dc2626;
+  --border: #e2e4e8;
+  --input: #e2e4e8;
+  --ring: #9ca3af;
+  --chart-1: #1a1a1a;
+  --chart-2: #e2e4e8;
+  --chart-3: #6b7280;
+  --chart-4: #1a1a1a;
+  --chart-5: #dc2626;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #1a1a1a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f1f3;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: #e2e4e8;
+  --sidebar-ring: #9ca3af;
+
+  /* SpaceX semantic tokens — light overrides */
+  --spx-canvas: #eaecf1;
+  --spx-card: #ffffff;
+  --spx-card-hover: #f3f4f6;
+  --spx-border: #dde0e6;
+  --spx-border-subtle: rgba(221, 224, 230, 0.5);
+  --spx-text: #111827;
+  --spx-text-secondary: #374151;
+  --spx-muted: #6b7280;
+  --spx-icon-dim: #9ca3af;
+  --spx-input-bg: #f3f4f6;
+  --spx-active-bg: rgba(0, 0, 0, 0.06);
+  --spx-hover-bg: rgba(0, 0, 0, 0.03);
+  --spx-overlay: rgba(0, 0, 0, 0.4);
+  --spx-topbar-bg: rgba(255, 255, 255, 0.98);
+  --spx-active-border: #111827;
+  --spx-scrollbar-track: #eaecf1;
+  --spx-scrollbar-thumb: #c9cdd5;
+  --spx-scrollbar-hover: #9ca3af;
+  --spx-sidebar-bg: #111827;
+  --spx-sidebar-text: #f3f4f6;
+  --spx-sidebar-muted: #9ca3af;
+  --spx-sidebar-border: #374151;
+  --spx-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --spx-sidebar-active-bg: rgba(255, 255, 255, 0.1);
+  --spx-sidebar-active-border: #ffffff;
+  --spx-sidebar-shadow: 2px 0 20px rgba(0, 0, 0, 0.15);
+  --spx-topbar-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  --spx-table-header-bg: #f4f6f9;
+}
+
+/* Also keep .dark for explicit class toggling */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0b0d10;
+  --foreground: #e8e8ed;
+  --card: #0f1115;
+  --card-foreground: #e8e8ed;
+  --popover: #0f1115;
+  --popover-foreground: #e8e8ed;
+  --primary: #e8e8ed;
+  --primary-foreground: #0b0d10;
+  --secondary: #161920;
+  --secondary-foreground: #e8e8ed;
+  --muted: #161920;
+  --muted-foreground: #6b6f78;
+  --accent: #1c1f28;
+  --accent-foreground: #e8e8ed;
+  --destructive: #e53e3e;
+  --border: #2a2d35;
+  --input: #2a2d35;
+  --ring: #6b6f78;
+  --chart-1: #e8e8ed;
+  --chart-2: #2a2d35;
+  --chart-3: #6b6f78;
+  --chart-4: #e8e8ed;
+  --chart-5: #e53e3e;
+  --sidebar: #0b0d10;
+  --sidebar-foreground: #e8e8ed;
+  --sidebar-primary: #e8e8ed;
+  --sidebar-primary-foreground: #0b0d10;
+  --sidebar-accent: #161920;
+  --sidebar-accent-foreground: #e8e8ed;
+  --sidebar-border: #2a2d35;
+  --sidebar-ring: #6b6f78;
+
+  --spx-canvas: #0b0d10;
+  --spx-card: #0f1115;
+  --spx-card-hover: #161920;
+  --spx-border: #2a2d35;
+  --spx-border-subtle: rgba(42, 45, 53, 0.5);
+  --spx-text: #e8e8ed;
+  --spx-text-secondary: #a0a0a8;
+  --spx-muted: #6b6f78;
+  --spx-icon-dim: #3a3d45;
+  --spx-input-bg: #161920;
+  --spx-active-bg: rgba(255, 255, 255, 0.08);
+  --spx-hover-bg: rgba(255, 255, 255, 0.03);
+  --spx-overlay: rgba(0, 0, 0, 0.75);
+  --spx-topbar-bg: rgba(11, 13, 16, 0.95);
+  --spx-active-border: #ffffff;
+  --spx-scrollbar-track: #0b0d10;
+  --spx-scrollbar-thumb: #2a2d35;
+  --spx-scrollbar-hover: #6b6f78;
 }
 
 @layer base {
@@ -119,4 +239,20 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--spx-scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--spx-scrollbar-thumb);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--spx-scrollbar-hover);
 }

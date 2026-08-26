@@ -25,6 +25,7 @@ export default async function PipelinePage() {
     prisma.voucher.findMany({
       where: { userId: user.id, clientId: client.id },
       orderBy: { createdAt: "desc" },
+      take: 100,
       select: {
         id: true,
         status: true,

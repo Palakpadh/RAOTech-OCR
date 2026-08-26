@@ -12,6 +12,8 @@ export default async function ReportsPage() {
   // voucher line — for a page that reads about a dozen fields.
   const vouchers = await prisma.voucher.findMany({
     where: { userId: user.id, clientId: client.id },
+    orderBy: { createdAt: "desc" },
+    take: 500,
     select: {
       date: true,
       voucherType: true,

@@ -50,9 +50,9 @@ export function cacheDeletePrefix(prefix: string): void {
 
 export const TTL = {
   /** User row: only changes on profile edits, which are rare. */
-  user: 60_000,
+  user: 300_000,
   /** Client row: name/GSTIN edits are rare; switching changes the cookie key. */
-  client: 60_000,
+  client: 300_000,
   /** Client list for the switcher: invalidated explicitly on create/switch. */
-  clientList: 30_000,
+  clientList: 120_000,
 } as const;

@@ -7,16 +7,16 @@ import { Skeleton, TableSkeleton, PageHeaderSkeleton } from "@/components/Skelet
  */
 export default function DashboardLoading() {
   return (
-    <div className="p-6 md:p-10 space-y-8">
+    <div className="p-4 md:p-6 lg:p-7 space-y-6">
       <PageHeaderSkeleton />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-[1px]" style={{ background: "var(--spx-border)" }}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[86px] w-full" />
+          <div key={i} className="h-[100px]" style={{ background: "var(--spx-card)" }} />
         ))}
       </div>
 
-      <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden" style={{ border: "1px solid var(--spx-border)", background: "var(--spx-card)" }}>
         <TableSkeleton rows={6} />
       </div>
     </div>

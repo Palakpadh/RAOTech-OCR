@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { backendFetch } from "@/lib/backend";
+import { withRouteLogging } from "@/lib/trace";
 
-export async function POST(req: Request) {
+async function processInvoice(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -40,3 +41,5 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export const POST = withRouteLogging("api:/process-invoice", "POST", processInvoice);

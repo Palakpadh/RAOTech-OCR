@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { backendFetch } from "@/lib/backend";
+import { withRouteLogging } from "@/lib/trace";
 
 // Proxy a bank statement file to the FastAPI /extract-bank endpoint
-export async function POST(req: Request) {
+async function processBank(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -30,3 +31,5 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export const POST = withRouteLogging("api:/process-bank", "POST", processBank);
