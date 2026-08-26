@@ -324,11 +324,11 @@ export default function LandingPage() {
           </nav>
 
           <div className="ml-auto">
-            <Link href="/dashboard">
-              <Button className="rounded-none bg-primary text-primary-foreground hover:bg-primary/90">
-                Login / Register
-              </Button>
-            </Link>
+           <Link href="/pricing">
+  <Button className="rounded-none bg-primary text-primary-foreground hover:bg-primary/90">
+    Login / Register
+  </Button>
+</Link>
           </div>
         </div>
       </header>
