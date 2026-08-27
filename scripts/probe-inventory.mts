@@ -10,6 +10,11 @@
  *
  * Posts into RAOTECH and deletes everything it created.
  *
+ * REMOTEID is an ATTRIBUTE on <VOUCHER>, never a child element. Sent as a child
+ * Tally accepts the create and silently ignores the id, leaving a voucher that
+ * no delete can ever address -- an orphan, removable only by hand in the Day
+ * Book. This script made three that way before the form was corrected.
+ *
  *   npx tsx scripts/probe-inventory.mts
  */
 import { pushToTally, type TallyGateway } from "../src/lib/tally/connector";
@@ -147,11 +152,10 @@ const posted: string[] = [];
  */
 const nested = `
     <TALLYMESSAGE xmlns:UDF="TallyUDF">
-      <VOUCHER VCHTYPE="Purchase" ACTION="Create" OBJVIEW="Invoice Voucher View">
+      <VOUCHER REMOTEID="RAO-PROBE-INV-1" VCHTYPE="Purchase" ACTION="Create" OBJVIEW="Invoice Voucher View">
         <DATE>20260805</DATE>
         <EFFECTIVEDATE>20260805</EFFECTIVEDATE>
         <VOUCHERTYPENAME>Purchase</VOUCHERTYPENAME>
-        <REMOTEID>RAO-PROBE-INV-1</REMOTEID>
         <PARTYLEDGERNAME>RAO Probe Supplier</PARTYLEDGERNAME>
         <NARRATION>RAO inventory probe - nested accounting allocation</NARRATION>
         <ALLINVENTORYENTRIES.LIST>
@@ -184,10 +188,9 @@ if ((await step("PURCHASE, inventory + nested allocation", vch(nested))).ok)
  */
 const twoItems = `
     <TALLYMESSAGE xmlns:UDF="TallyUDF">
-      <VOUCHER VCHTYPE="Purchase" ACTION="Create" OBJVIEW="Invoice Voucher View">
+      <VOUCHER REMOTEID="RAO-PROBE-INV-2" VCHTYPE="Purchase" ACTION="Create" OBJVIEW="Invoice Voucher View">
         <DATE>20260805</DATE>
         <VOUCHERTYPENAME>Purchase</VOUCHERTYPENAME>
-        <REMOTEID>RAO-PROBE-INV-2</REMOTEID>
         <PARTYLEDGERNAME>RAO Probe Supplier</PARTYLEDGERNAME>
         <NARRATION>RAO inventory probe - two items plus tax</NARRATION>
         <ALLINVENTORYENTRIES.LIST>
@@ -303,8 +306,7 @@ for (const id of posted) {
     `delete ${id}`,
     vch(`
     <TALLYMESSAGE xmlns:UDF="TallyUDF">
-      <VOUCHER VCHTYPE="Purchase" ACTION="Delete">
-        <REMOTEID>${id}</REMOTEID>
+      <VOUCHER REMOTEID="${id}" VCHTYPE="Purchase" ACTION="Delete">
         <VOUCHERTYPENAME>Purchase</VOUCHERTYPENAME>
       </VOUCHER>
     </TALLYMESSAGE>`)

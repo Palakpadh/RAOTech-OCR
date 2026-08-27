@@ -312,12 +312,28 @@ debited twice. There is a unit test pinning this
 because nothing on our side would ever report it — the client would just find
 their expenses doubled.
 
-**Before any of this works, the company needs inventory switched on:**
-`F11 → Inventory Features → Maintain Stock`. A company running "Maintain
-Accounts Only" accepts stock item masters quite happily and then refuses every
-voucher that names one, *with no reason given*. That was measured, not guessed
-(`connector-protocol.md` rule 13), and the app now says so in the failure
-message rather than making you find it.
+**Two company settings have to be on, and they are separate.**
+
+`F11 → Inventory Features → Maintain Stock` lets stock exist at all. Without it
+a company accepts stock item masters quite happily and then refuses every
+voucher that names one, *with no reason given*.
+
+But that alone is not enough. Measured on a company with Maintain Stock **on**:
+a Stock Journal — a pure inventory voucher — posts fine, while a Purchase or a
+Sales voucher carrying the same item is rejected with a blank reason, in every
+XML shape tried. Stock can move; an *item invoice* cannot be recorded. That is
+governed separately, by invoicing being enabled for the company
+(`F11 → Accounting Features → Enable Invoicing`, and purchases recorded in
+invoice mode).
+
+The quick way to tell the two apart, if a stock push is failing:
+
+```bash
+npx tsx scripts/probe-inventory.mts
+```
+
+A Stock Journal that posts while Purchase-with-items does not means stock is
+fine and invoicing is the thing to switch on.
 
 Headless:
 
