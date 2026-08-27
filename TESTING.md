@@ -344,7 +344,44 @@ npx tsx scripts/e2e-inventory.mts cleanup
 npx tsx scripts/probe-inventory.mts         # what Tally accepts, measured live
 ```
 
-### 3.6 Pushing to Tally
+### 3.6 All Clients — the portfolio view
+
+Every other screen is scoped to the client in the switcher, which is right for
+doing the work and useless for deciding what work to do. **All Clients** is the
+screen a firm owner opens on a Monday.
+
+1. **All Clients** in the sidebar (or ⌘K → "All clients").
+2. Rows are sorted by **what needs attention, not alphabetically**. The order is
+   by consequence, not volume: a rejected voucher is wrong books right now; one
+   stuck sending may be wrong books and we cannot tell, which is worse than
+   knowing; work merely waiting is not a problem at all.
+3. Clicking a row **switches the whole app** to that client and lands on its
+   dashboard — it does not just navigate, because every other screen reads
+   whichever client is active server-side.
+
+**Worth checking:** a client with one rejected voucher must sort above a client
+with a thousand drafts. There is a test pinning that (`portfolio.test.ts`),
+because it is the kind of ordering that gets "improved" into a total.
+
+### 3.7 Stock items
+
+**Settings → Ledgers & Rules → Stock Items.** These masters are the switch for
+the whole inventory feature: a voucher line becomes an inventory allocation only
+if an item of that name exists here, so a services client has an empty tab and
+nothing about their vouchers changes.
+
+- Add an item without a unit. It should refuse — the reason is on the screen.
+- Edit the unit of an item that is not yet on any voucher: allowed.
+- Edit the unit of one that **is**: the field is closed and says why. Tally will
+  not alter a base unit once stock has moved, so an edit here would only make
+  the next push fail.
+- Change an HSN on an item Tally already has. It should say it is queued to
+  update on the next sync — the master goes back into `MASTER_CREATE`, which is
+  idempotent, so Tally alters rather than duplicating.
+- Try to delete an item that is on a voucher: refused. Delete an unused one:
+  removed here only, never from Tally.
+
+### 3.8 Pushing to Tally
 
 1. Approve some vouchers.
 2. **Send to Tally.** A badge tracks each one: grey queued → amber sending →
@@ -365,14 +402,14 @@ npx tsx scripts/e2e-idempotency.mts
 Book. Unsync it again; that must also report success — a voucher that is already
 gone is the state you asked for.
 
-### 3.7 GST 2B reconciliation
+### 3.9 GST 2B reconciliation
 
 1. **GST → Upload** a GSTR-2B JSON.
 2. It matches each row against your purchase invoices and buckets them:
    matched, value mismatch, missing in 2B, missing in books, duplicate.
 3. Check a value mismatch by hand — the two amounts are shown side by side.
 
-### 3.8 Ledger rules (invoice side)
+### 3.10 Ledger rules (invoice side)
 
 **Settings → Ledger Rules.** These are the invoice-side rules: match on GSTIN,
 vendor name or HSN. They are a different mechanism from the banking rule list —
@@ -388,7 +425,7 @@ The bill must **not** get the rent ledger.
 ## 4. The automated tests
 
 ```bash
-npm test                        # 614 unit tests, no database, no Tally, ~3s
+npm test                        # 620 unit tests, no database, no Tally, ~3s
 npx tsc --noEmit                # types
 npm run lint
 ```

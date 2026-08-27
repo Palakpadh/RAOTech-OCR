@@ -17,6 +17,7 @@ import {
   Link2,
   ClipboardList,
   Filter,
+  Building2,
   PlugZap,
   Settings,
 } from "lucide-react";
@@ -25,6 +26,9 @@ import { extraPagesEnabled } from "@/lib/featureFlags";
 
 const routes = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", color: "text-sky-500" },
+  // Above the per-client screens on purpose: this is the one that answers
+  // "which client needs me", and everything below it assumes that is settled.
+  { label: "All Clients", icon: Building2, href: "/clients", color: "text-amber-300" },
   { label: "Pipeline", icon: Kanban, href: "/pipeline", color: "text-indigo-400", localOnly: true },
   { label: "Upload", icon: UploadCloud, href: "/upload", color: "text-violet-500" },
   { label: "Review queue", icon: Filter, href: "/review", color: "text-rose-400", localOnly: true },

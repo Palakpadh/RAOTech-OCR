@@ -12,11 +12,13 @@ import {
   Kanban,
   Filter,
   PlugZap,
+  Building2,
 } from "lucide-react";
 import { extraPagesEnabled } from "@/lib/featureFlags";
 
 const COMMANDS = [
   { id: "dash", label: "Go to Dashboard", href: "/dashboard", icon: LayoutDashboard, keywords: "home kpi" },
+  { id: "clients", label: "All clients", href: "/clients", icon: Building2, keywords: "portfolio switch firm overview stuck failed" },
   { id: "upload", label: "Upload documents", href: "/upload", icon: UploadCloud, keywords: "ocr extract" },
   { id: "tx", label: "Transactions", href: "/transactions", icon: ListChecks, keywords: "vouchers approve" },
   {

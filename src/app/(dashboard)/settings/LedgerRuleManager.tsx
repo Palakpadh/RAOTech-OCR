@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import StockItemsTab from "./StockItemsTab";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,7 @@ export default function LedgerRuleManager({
   clientName?: string;
   mappingAccuracy?: number | null;
 }) {
-  const [tab, setTab] = useState<"ledgers" | "rules">(
+  const [tab, setTab] = useState<"ledgers" | "rules" | "items">(
     "ledgers"
   );
 
@@ -162,6 +163,21 @@ export default function LedgerRuleManager({
           Mapping Rules ({rules.length})
         </button>
 
+        {/* Stock items live here rather than on their own screen: they are
+            masters, they are pushed by the same MASTER_CREATE job as ledgers,
+            and a firm that never opens this tab is a firm whose clients do not
+            keep stock — which is most of them. */}
+        <button
+          onClick={() => setTab("items")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
+            tab === "items"
+              ? "bg-white text-black border-white"
+              : "bg-[var(--spx-input-bg)] border-[var(--spx-border)] text-[var(--spx-muted)] hover:bg-[var(--spx-card-hover)] hover:text-[var(--spx-text)]"
+          }`}
+        >
+          Stock Items
+        </button>
+
       </div>
 
       {tab === "ledgers" ? (
@@ -169,6 +185,8 @@ export default function LedgerRuleManager({
           ledgers={ledgers}
           setLedgers={setLedgers}
         />
+      ) : tab === "items" ? (
+        <StockItemsTab />
       ) : (
         <RulesTab
           ledgers={ledgers}
