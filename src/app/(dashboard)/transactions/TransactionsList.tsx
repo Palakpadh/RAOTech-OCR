@@ -20,7 +20,12 @@ import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TallySyncBadge } from "@/components/TallySyncBadge";
 import { TallySyncOverlay } from "@/components/TallySyncOverlay";
-import { useTallyPush, useVoucherSyncs } from "@/components/tallyClient";
+import {
+  useTallyPush,
+  usePushPreflight,
+  useVoucherSyncs,
+  type PreflightResult,
+} from "@/components/tallyClient";
 
 /** Mirrors PreflightIssue in src/lib/tally/preflight.ts. */
 interface ExportIssue {
@@ -163,6 +168,20 @@ export default function TransactionsList({
     router.refresh();
   }, [refreshSyncs, router]);
   const push = useTallyPush({ onSettled });
+
+  /**
+   * What a push would do, worked out as the selection changes rather than
+   * after the click.
+   *
+   * The server checks all of this anyway and answers 422 — that is the
+   * authority and it stays. What it could not do is tell someone *before* they
+   * committed to forty vouchers that six of them were never going to post, and
+   * then leave them to find those six in a table of forty.
+   */
+  const { preflight, checking: preflighting } = usePushPreflight(
+    useMemo(() => [...selected].sort(), [selected])
+  );
+  const pushBlocked = preflight ? !preflight.ready : false;
 
   const labels = useMemo(
     () => Object.fromEntries(vouchers.map((v) => [v.id, `${v.vendor} · ${v.invoiceNumber}`])),
@@ -399,7 +418,13 @@ export default function TransactionsList({
           <Button
             size="sm"
             className="bg-[#0b6b3a] hover:bg-[#0a5c32]"
-            disabled={!selected.size || push.state.phase !== "idle"}
+            disabled={!selected.size || push.state.phase !== "idle" || pushBlocked}
+            title={
+              pushBlocked
+                ? preflight?.reason ??
+                  `${preflight?.blockingCount} of these would be rejected by Tally. Fix them first.`
+                : undefined
+            }
             onClick={() => push.start([...selected])}
           >
             <Send className="mr-2 h-4 w-4" />
@@ -407,6 +432,10 @@ export default function TransactionsList({
           </Button>
         </div>
       </div>
+
+      {selected.size > 0 && (
+        <PreflightPanel result={preflight} checking={preflighting} />
+      )}
 
       {blocked && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4">
@@ -790,6 +819,158 @@ export default function TransactionsList({
           }}
           onCancel={() => setConfirmDelete(null)}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * The verdict on the current selection, above the button that acts on it.
+ *
+ * Deliberately one sentence first and detail second. An accountant selecting
+ * rows wants to know whether to press the button, not to read a report; the
+ * per-voucher reasons matter only once the answer is "no", so they open rather
+ * than fill the screen.
+ *
+ * Nothing here is authoritative — the push route runs the same checks and
+ * answers 422 regardless. This is a courtesy, and it fails open: if the check
+ * cannot run, the button stays enabled and the server does its job.
+ */
+function PreflightPanel({
+  result,
+  checking,
+}: {
+  result: PreflightResult | null;
+  checking: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (checking && !result) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border p-3 text-sm text-gray-500">
+        <Loader2 className="size-4 animate-spin" /> Checking what Tally would say…
+      </div>
+    );
+  }
+  if (!result) return null;
+
+  const errors = result.issues.filter((i) => i.severity === "error");
+  const warnings = result.issues.filter((i) => i.severity === "warning");
+
+  // Ordered by what stops the push, then by what makes it silently do nothing,
+  // then by what is merely worth knowing.
+  const tone = !result.ready
+    ? "bad"
+    : result.connector && !result.connector.online
+      ? "warn"
+      : warnings.length || result.mastersToCreate
+        ? "info"
+        : "ok";
+
+  const box = {
+    bad: "border-red-200 bg-red-50",
+    warn: "border-amber-200 bg-amber-50",
+    info: "border-sky-200 bg-sky-50",
+    ok: "border-emerald-200 bg-emerald-50",
+  }[tone];
+
+  const headline = !result.ready
+    ? (result.reason ??
+      `${result.blockingCount} of ${result.voucherCount} would be rejected by Tally.`)
+    : result.connector && !result.connector.online
+      ? "Nothing is listening. These will queue and sit until the connector runs."
+      : `${result.voucherCount} ready to post to ${result.companyName ?? "Tally"}.`;
+
+  return (
+    <div className={`rounded-xl border p-3 text-sm ${box}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2">
+          {tone === "bad" ? (
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600" />
+          ) : tone === "ok" ? (
+            <CheckSquare className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+          ) : (
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+          )}
+          <div>
+            <p className="font-medium text-gray-900">{headline}</p>
+
+            <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
+              {result.notPushable ? (
+                <li>
+                  {result.notPushable} of the rows you picked are not approved and were left out.
+                </li>
+              ) : null}
+              {result.mastersToCreate ? (
+                <li>
+                  {result.mastersToCreate} master
+                  {result.mastersToCreate === 1 ? "" : "s"} will be created in Tally first.
+                </li>
+              ) : null}
+              {result.movesStock ? (
+                <li>
+                  Some of these move stock. That needs the company to have inventory and invoicing
+                  switched on, or Tally rejects them without saying why.
+                </li>
+              ) : null}
+              {result.educationMode ? (
+                <li>
+                  Tally is in education mode — it only accepts the 1st, 2nd and last day of a
+                  month.
+                </li>
+              ) : null}
+              {result.connector && !result.connector.online && result.connector.name ? (
+                <li>
+                  Last heard from {result.connector.name}{" "}
+                  {result.connector.lastSeenAt
+                    ? new Date(result.connector.lastSeenAt).toLocaleString()
+                    : "never"}
+                  .
+                </li>
+              ) : null}
+              {result.connector?.online && result.connector.tallyReachable === false ? (
+                <li>
+                  The connector is running but cannot reach Tally
+                  {result.connector.tallyMessage ? `: ${result.connector.tallyMessage}` : "."}
+                </li>
+              ) : null}
+              {warnings.length && result.ready ? (
+                <li>
+                  {warnings.length} warning{warnings.length === 1 ? "" : "s"} — these still post.
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {result.fix && (
+            <Link href={result.fix.href} className="text-xs font-medium underline">
+              {result.fix.label}
+            </Link>
+          )}
+          {result.issues.length > 0 && (
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="text-xs font-medium text-gray-600 underline"
+            >
+              {open ? "Hide" : `Show ${result.issues.length}`}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <ul className="mt-3 space-y-1 border-t pt-3 text-xs">
+          {[...errors, ...warnings].slice(0, 40).map((i, n) => (
+            <li key={n} className={i.severity === "error" ? "text-red-700" : "text-amber-700"}>
+              {i.message}
+            </li>
+          ))}
+          {result.issues.length > 40 && (
+            <li className="text-gray-500">…and {result.issues.length - 40} more.</li>
+          )}
+        </ul>
       )}
     </div>
   );

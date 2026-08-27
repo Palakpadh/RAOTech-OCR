@@ -399,3 +399,90 @@ export function useVoucherSyncs(voucherIds: string[]) {
 
   return { syncs, refresh };
 }
+
+/* ------------------------------------------------------------- preflight */
+
+export interface PreflightIssue {
+  voucherId: string;
+  code: string;
+  severity: "error" | "warning";
+  message: string;
+}
+
+export interface PreflightResult {
+  ready: boolean;
+  reason?: string;
+  fix?: { label: string; href: string };
+  companyName?: string;
+  voucherCount?: number;
+  notPushable?: number;
+  blockingCount?: number;
+  warningCount?: number;
+  issues: PreflightIssue[];
+  mastersToCreate?: number;
+  movesStock?: boolean;
+  connector?: {
+    online: boolean;
+    name: string | null;
+    lastSeenAt: string | null;
+    tallyReachable: boolean | null;
+    tallyMessage: string | null;
+  };
+  educationMode?: boolean;
+}
+
+/**
+ * What a push would do, checked as the selection changes.
+ *
+ * Debounced, because this fires on every checkbox click and a user ticking
+ * forty rows would otherwise issue forty requests. Two hundred milliseconds is
+ * below the threshold where the panel feels like it lags the selection, and
+ * above the rate at which anyone can click.
+ *
+ * Every response carries the selection it was computed for, and a stale one is
+ * dropped: without that, unticking a row that had the only blocking issue could
+ * leave the panel still saying the push is blocked, which is the worst possible
+ * failure for a control whose whole job is to be trusted.
+ */
+export function usePushPreflight(voucherIds: string[]) {
+  const [result, setResult] = useState<PreflightResult | null>(null);
+  const [checking, setChecking] = useState(false);
+  const key = voucherIds.join(",");
+
+  useEffect(() => {
+    if (!key) {
+      setResult(null);
+      setChecking(false);
+      return;
+    }
+
+    let alive = true;
+    setChecking(true);
+
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/tally/preflight", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voucherIds: key.split(",") }),
+        });
+        const data = (await res.json()) as PreflightResult;
+        if (alive) setResult(res.ok ? data : { ready: true, issues: [] });
+      } catch {
+        // A preflight that cannot run must not block the push: the server
+        // checks again anyway, and refusing on a network blip would be a
+        // worse failure than letting the 422 do its job.
+        if (alive) setResult({ ready: true, issues: [] });
+      } finally {
+        if (alive) setChecking(false);
+      }
+    }, 200);
+
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [key]);
+
+  return { preflight: result, checking };
+}

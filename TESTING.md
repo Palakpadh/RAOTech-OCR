@@ -390,6 +390,25 @@ nothing about their vouchers changes.
    exist!` — rather than a generic failure. Fix and re-send.
 4. Verify in TallyPrime: `Gateway → Day Book`, or `Display → Account Books`.
 
+**The check runs before you click, not after.** Select some vouchers and a panel
+appears above the button saying what a push would do. It is a courtesy, not the
+authority — the server runs the same checks and answers 422 regardless — so if
+it cannot run, the button stays enabled and the server does its job.
+
+Worth provoking:
+
+- Select an unbalanced or unmapped voucher. The panel turns red, says how many
+  would be rejected, and **Push is disabled** with the reason on hover. Expand
+  it for the per-voucher list, so you are not hunting six bad rows out of forty.
+- Stop the connector and select anything. The panel warns that nothing is
+  listening — these would queue and sit. Push stays enabled, because queueing
+  is legitimate; you just get told.
+- Select vouchers for a client whose masters are not in Tally yet. It says how
+  many will be created first, which is why the first push of a new client runs
+  two jobs.
+- Select a voucher that moves stock. It reminds you the company needs inventory
+  *and* invoicing on, because Tally rejects those without saying why.
+
 **Test that a re-push is safe.** Send the same voucher twice. Tally must show
 **one** voucher, altered, not two. Each voucher carries a `RAO-<uuid>` REMOTEID
 and that is what Tally matches on:
