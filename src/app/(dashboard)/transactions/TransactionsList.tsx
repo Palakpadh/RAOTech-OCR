@@ -132,9 +132,12 @@ function StatusChip({
 export default function TransactionsList({
   vouchers,
   statements,
+  initialSyncFilter = null,
 }: {
   vouchers: VoucherRow[];
   statements: BankRow[];
+  /** Set by `?sync=failed|stuck`, so the dashboard can link into this view. */
+  initialSyncFilter?: "failed" | "stuck" | null;
 }) {
   const router = useRouter();
 
@@ -143,7 +146,8 @@ export default function TransactionsList({
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<"all" | "ready" | "low">("all");
   const [hideSynced, setHideSynced] = useState(false);
-  const [failedOnly, setFailedOnly] = useState(false);
+  const [failedOnly, setFailedOnly] = useState(initialSyncFilter === "failed");
+  const [stuckOnly, setStuckOnly] = useState(initialSyncFilter === "stuck");
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
   const { toast } = useToast();
   // Populated when the server refuses an export because Tally would reject it.
@@ -173,8 +177,19 @@ export default function TransactionsList({
     if (hideSynced)
       rows = rows.filter((v) => syncs[v.id]?.state !== "POSTED" && v.status !== "POSTED");
     if (failedOnly) rows = rows.filter((v) => syncs[v.id]?.state === "FAILED");
+    // "Stuck" is SENDING and old enough that a push in flight is ruled out.
+    // Matches the dashboard's ten-minute grace period.
+    if (stuckOnly) {
+      const cutoff = Date.now() - 10 * 60 * 1000;
+      rows = rows.filter((v) => {
+        const s = syncs[v.id];
+        if (s?.state !== "SENDING") return false;
+        const at = s.lastAttemptAt ? new Date(s.lastAttemptAt).getTime() : 0;
+        return at < cutoff;
+      });
+    }
     return rows;
-  }, [vouchers, filter, hideSynced, failedOnly, syncs]);
+  }, [vouchers, filter, hideSynced, failedOnly, stuckOnly, syncs]);
 
   /** Only a voucher Tally has actually accepted can be removed from its books. */
   const deletable = useMemo(
@@ -527,10 +542,23 @@ export default function TransactionsList({
               Hide Tally Synced
             </button>
             <button
-              onClick={() => setFailedOnly((v) => !v)}
+              onClick={() => {
+                setFailedOnly((v) => !v);
+                setStuckOnly(false);
+              }}
               className={`px-3 py-2 rounded-lg text-xs font-medium ${failedOnly ? "bg-red-600 text-white" : "bg-white border text-gray-500"}`}
             >
               Failed Records Only
+            </button>
+            <button
+              onClick={() => {
+                setStuckOnly((v) => !v);
+                setFailedOnly(false);
+              }}
+              title="Sent to a connector more than ten minutes ago with no result reported back"
+              className={`px-3 py-2 rounded-lg text-xs font-medium ${stuckOnly ? "bg-amber-500 text-white" : "bg-white border text-gray-500"}`}
+            >
+              Stuck Sending
             </button>
           </>
         )}
@@ -565,7 +593,7 @@ export default function TransactionsList({
                       colSpan={8}
                       className="px-4 py-12 text-center text-zinc-600"
                     >
-                      {failedOnly || hideSynced
+                      {failedOnly || stuckOnly || hideSynced
                         ? "No rows match these filters."
                         : "No invoices yet. Upload to create vouchers."}
                     </td>

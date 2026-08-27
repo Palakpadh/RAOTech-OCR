@@ -23,6 +23,13 @@ export interface VoucherSync {
   error: string | null;
   tallyVoucherNumber: string | null;
   syncedAt: string | null;
+  /**
+   * When the push was last handed out. `syncedAt` stays null while a voucher is
+   * in flight, so this is the only field that can age a SENDING row into
+   * "stuck" — which is the state worth surfacing, because it means a device
+   * took the job and never said what happened.
+   */
+  lastAttemptAt: string | null;
 }
 
 export interface TallyJob {

@@ -45,6 +45,7 @@ export async function GET(req: Request) {
               error: true,
               tallyVoucherNumber: true,
               syncedAt: true,
+              lastAttemptAt: true,
             },
           })
         : Promise.resolve([]),

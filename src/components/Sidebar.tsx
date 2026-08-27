@@ -38,7 +38,8 @@ const routes = [
   { label: "Intake Links", icon: Link2, href: "/intake", color: "text-pink-400", localOnly: true },
   { label: "Tasks", icon: ClipboardList, href: "/tasks", color: "text-lime-400", localOnly: true },
   { label: "AI Assistant", icon: MessageSquare, href: "/chat", color: "text-pink-700" },
-  { label: "Communication", icon: MessagesSquare, href: "/communication", color: "text-teal-400" },
+  // Mock data only — see LOCAL_ONLY_ROUTE_PREFIXES in featureFlags.ts.
+  { label: "Communication", icon: MessagesSquare, href: "/communication", color: "text-teal-400", localOnly: true },
 ];
 
 type SidebarProps = {
