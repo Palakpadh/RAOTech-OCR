@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 
@@ -13,12 +14,12 @@ import {
   Users,
   Volume2,
   VolumeX,
-  ChevronDown,
   Play,
   Clock,
   CheckCircle2,
   Zap,
   ShieldCheck,
+  ChevronDown,
 } from "lucide-react";
 
 function useReveal<T extends HTMLElement>() {
@@ -94,40 +95,13 @@ function Reveal({
   );
 }
 
-const PIPELINE = [
-  {
-    cmd: "intake --source=upload,email",
-    title: "Ingest",
-    detail:
-      "Drop in PDFs, scans, or photographed invoices — one at a time or in bulk.",
-  },
-  {
-    cmd: "extract --engine=ocr",
-    title: "Extract",
-    detail:
-      "Line items, GSTIN, tax splits, and totals are pulled out and structured automatically.",
-  },
-  {
-    cmd: "reconcile --against=gstr-2b",
-    title: "Reconcile",
-    detail:
-      "Purchase register is matched against GSTR-2B so mismatches surface before your return does.",
-  },
-  {
-    cmd: "sync --target=tally",
-    title: "Sync",
-    detail:
-      "Approved vouchers export straight to Tally XML, ledgers mapped, ready to import.",
-  },
-];
-
 const PILLARS = [
   {
     icon: FileStack,
     eyebrow: "Document Intelligence",
     title: "Smart OCR & Intake",
     description:
-      "Bulk-upload PDFs, PNGs, and JPEGs. RAO AI extracts line items and totals so nobody re-types an invoice by hand.",
+      "Bulk-upload PDFs, PNGs, and JPEGs. RAO AI extracts line items, totals, and tax splits automatically without manual data entry.",
     href: "/upload",
     cta: "Open intake",
   },
@@ -136,16 +110,16 @@ const PILLARS = [
     eyebrow: "Conversational AI",
     title: "AI Chat Assistant",
     description:
-      'Ask it directly — "what was my total purchases last month" — and get an answer pulled from your own ledgers.',
+      'Ask directly — "what was my total purchase amount last month" — and get instant insights pulled from your structured data.',
     href: "/chat",
     cta: "Ask a question",
   },
   {
     icon: FileSpreadsheet,
     eyebrow: "Compliance & Sync",
-    title: "GST Reconciliation & Tally Sync",
+    title: "GST Reconciliation & ERP Sync",
     description:
-      "Match your purchase register against GSTR-2B, resolve the gaps, then export approved vouchers as Tally XML.",
+      "Match your purchase register against GSTR-2B, resolve mismatches, and export approved vouchers straight to your accounting system.",
     href: "/gst",
     cta: "Reconcile GST",
   },
@@ -154,9 +128,9 @@ const PILLARS = [
     eyebrow: "Client & Team Communication",
     title: "Communication Hub",
     description:
-      "Message clients and your team in one place — threads, groups, and shared context, without leaving the workspace.",
+      "Message clients and your team in one centralized place with full context and file history.",
     href: "/communication",
-    cta: "Open communication hub",
+    cta: "Open hub",
   },
 ];
 
@@ -166,51 +140,51 @@ const RESULTS = [
     value: "80%",
     label: "Time saved",
     detail:
-      "Less manual data entry across intake, reconciliation, and voucher review.",
+      "Less manual data entry across document intake, reconciliation, and voucher review.",
   },
   {
     icon: CheckCircle2,
     value: "100%",
     label: "Accuracy",
     detail:
-      "Every extracted line item is verified before it reaches Tally.",
+      "Every extracted line item is structured and verified before sync.",
   },
   {
     icon: Zap,
     value: "5x",
-    label: "Faster reconciliation",
+    label: "Faster processing",
     detail:
-      "GST matching that used to take days now clears in hours.",
+      "Tax matching and invoice validation that used to take days now clears in minutes.",
   },
   {
     icon: ShieldCheck,
     value: "0",
     label: "Duplicate entries",
     detail:
-      "Ledger mapping rules catch repeats before they're synced.",
+      "Automated ledger mapping rules catch repeats before export.",
   },
 ];
 
 const FAQS = [
   {
     q: "What is RAO AI?",
-    a: "RAO AI is an automation layer for CA firms and accounting teams — it reads your invoices, reconciles GST, and keeps Tally in sync, so the manual data-entry work disappears.",
+    a: "RAO AI is an intelligent automation platform for finance and accounting teams — it processes invoices, reconciles tax registers, and seamlessly integrates with accounting systems.",
   },
   {
-    q: "What files can I upload?",
-    a: "PDF, PNG, and JPEG for now, uploaded one at a time or in bulk. Extraction runs the same way either way.",
+    q: "What file types can I upload?",
+    a: "You can upload PDF, PNG, and JPEG documents, either individually or in bulk.",
   },
   {
-    q: "Does it work with Tally?",
-    a: "Yes. Once vouchers are reviewed and approved, RAO AI exports a Tally XML file with ledgers already mapped, ready to import into TallyPrime.",
+    q: "Does it integrate with my accounting software?",
+    a: "Yes. Once vouchers are reviewed and approved, RAO AI exports structured XML and CSV files with mapped ledgers ready for import into your accounting software.",
   },
   {
     q: "How does GST reconciliation work?",
-    a: "Your purchase register is matched line-by-line against GSTR-2B. Anything that doesn't match is flagged so you can resolve it before filing.",
+    a: "Your purchase register is matched line-by-line against GSTR-2B records. Any discrepancies are highlighted instantly so you can resolve them prior to filing.",
   },
   {
-    q: "Is my data private to my firm?",
-    a: "Every account is scoped to its own workspace and sign-in is handled through Clerk. You control who on your team has access.",
+    q: "Is my data secure and private?",
+    a: "Every organization operates in an isolated workspace with enterprise authentication managed via Clerk. You maintain complete control over access permissions.",
   },
 ];
 
@@ -221,12 +195,6 @@ export default function LandingPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-
-  const heroDate = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 
   useEffect(() => {
     const video = videoRef.current;
@@ -291,8 +259,9 @@ export default function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      {/* ── Header ── */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center px-4 lg:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center px-4 lg:px-6">
           <Link
             href="/"
             className="text-xl font-bold tracking-tight"
@@ -300,44 +269,97 @@ export default function LandingPage() {
             RAO AI
           </Link>
 
-          <nav className="ml-10 hidden items-center gap-6 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground md:flex">
+          <nav className="ml-10 hidden items-center gap-8 font-medium text-sm text-muted-foreground md:flex">
             <a
               href="#platform"
               className="transition-colors hover:text-foreground"
             >
               Platform
             </a>
-
             <a
-              href="#how-it-works"
+              href="#results"
               className="transition-colors hover:text-foreground"
             >
-              How it works
-            </a>
-
-            <a
-              href="#faq"
-              className="transition-colors hover:text-foreground"
-            >
-              FAQ
+              Results
             </a>
           </nav>
 
-          <div className="ml-auto">
-           <Link href="/pricing">
-  <Button className="rounded-none bg-primary text-primary-foreground hover:bg-primary/90">
-    Login / Register
-  </Button>
-</Link>
+          <div className="ml-auto flex items-center gap-3">
+            <SignedOut>
+              <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+                <Button variant="outline" className="rounded-lg font-medium border-border hover:bg-accent">
+                  Login
+                </Button>
+              </SignInButton>
+              <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+                <Button className="rounded-lg bg-primary font-medium text-primary-foreground hover:bg-primary/90 shadow-sm">
+                  Register
+                </Button>
+              </SignUpButton>
+            </SignedOut>
+
+            <SignedIn>
+              <Link href="/dashboard">
+                <Button className="rounded-lg bg-primary font-medium text-primary-foreground hover:bg-primary/90 shadow-sm">
+                  Get started
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </SignedIn>
           </div>
         </div>
       </header>
 
       <main className="flex-1">
-        <section className="w-full border-b border-border bg-background">
-          <div className="w-full bg-black">
-            <div className="mx-auto w-full max-w-[1600px]">
-              <div className="relative aspect-video w-full overflow-hidden">
+        {/* ── Hero & Framed Video ── */}
+        <section className="w-full border-b border-border bg-background py-10 md:py-16">
+          <div className="mx-auto max-w-6xl px-4 md:px-6">
+            <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Built for enterprise finance &amp; accounting teams
+                </p>
+
+                <h1 className="mt-4 max-w-4xl text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl lg:text-7xl">
+                  Your Work,
+                  <br />
+                  Our Trusted Care.
+                </h1>
+              </div>
+
+              <div className="lg:pb-1">
+                <p className="max-w-xl text-sm leading-7 text-muted-foreground md:text-base">
+                  RAO AI reads your invoices, reconciles tax data, and keeps
+                  your accounting system in sync — eliminating manual data entry.
+                </p>
+
+                <div className="mt-7 flex flex-wrap gap-3.5">
+                  <Link href="/dashboard">
+                    <Button
+                      size="lg"
+                      className="rounded-lg bg-primary px-6 py-6 font-semibold text-primary-foreground hover:bg-primary/90 shadow-md transition-all"
+                    >
+                      Get started
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+
+                  <a href="#platform">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="rounded-lg border-border px-6 py-6 font-semibold bg-background/50 hover:bg-accent transition-all"
+                    >
+                      Explore platform
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Framed Video ── */}
+            <div className="mt-12 md:mt-16">
+              <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border/80 bg-black shadow-2xl ring-1 ring-white/10">
                 <video
                   ref={videoRef}
                   className="absolute inset-0 h-full w-full object-cover"
@@ -346,21 +368,11 @@ export default function LandingPage() {
                   loop
                   playsInline
                   preload="auto"
-                  onLoadedData={() => {
-                    setVideoError(false);
-                  }}
-                  onCanPlay={() => {
-                    setVideoError(false);
-                  }}
-                  onPlay={() => {
-                    setIsPlaying(true);
-                  }}
-                  onPause={() => {
-                    setIsPlaying(false);
-                  }}
-                  onError={() => {
-                    setVideoError(true);
-                  }}
+                  onLoadedData={() => setVideoError(false)}
+                  onCanPlay={() => setVideoError(false)}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onError={() => setVideoError(true)}
                 >
                   <source
                     src="/static/kling_20260815_VIDEO_Updated_10_6126_0.mp4"
@@ -387,7 +399,6 @@ export default function LandingPage() {
                       <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/50">
                         Video unavailable
                       </p>
-
                       <p className="mt-2 text-sm text-white/70">
                         Please check the video file.
                       </p>
@@ -398,10 +409,8 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={toggleMute}
-                  aria-label={
-                    isMuted ? "Unmute video" : "Mute video"
-                  }
-                  className="absolute bottom-5 right-5 z-30 flex h-10 w-10 items-center justify-center bg-black/70 text-white ring-1 ring-white/20 transition-colors hover:bg-black"
+                  aria-label={isMuted ? "Unmute video" : "Mute video"}
+                  className="absolute bottom-5 right-5 z-30 flex h-10 w-10 items-center justify-center rounded-lg bg-black/70 text-white ring-1 ring-white/20 transition-colors hover:bg-black"
                 >
                   {isMuted ? (
                     <VolumeX className="h-5 w-5" />
@@ -412,70 +421,21 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-
-          <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16 lg:py-20">
-            <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {heroDate} — Built for Indian CA&apos;s &amp; tax teams
-                </p>
-
-                <h1 className="mt-4 max-w-4xl text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl lg:text-7xl">
-                  Your Work,
-                  <br />
-                  Our Trusted Care.
-                </h1>
-              </div>
-
-              <div className="lg:pb-1">
-                <p className="max-w-xl text-sm leading-7 text-muted-foreground md:text-base">
-                  RAO AI reads your invoices, matches your GST, and keeps
-                  Tally in sync — so your team stops re-typing what a machine
-                  can read.
-                </p>
-
-                <div className="mt-7 flex flex-wrap gap-3">
-                  <Link href="/dashboard">
-                    <Button
-                      size="lg"
-                      className="rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      Get started
-                      <ArrowRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </Link>
-
-                  <a href="#how-it-works">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="rounded-none border-border bg-transparent hover:bg-accent"
-                    >
-                      See how it works
-                    </Button>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
         </section>
 
+        {/* ── Feature Specs Bar ── */}
         <section className="border-b border-border bg-card/40">
           <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px bg-border md:grid-cols-4">
             {[
               ["Document types", "PDF · PNG · JPEG"],
-              ["Reconciliation", "Matched to GSTR-2B"],
-              ["Export target", "Tally XML"],
+              ["Reconciliation", "GSTR-2B Matching"],
+              ["Export target", "Accounting XML / CSV"],
               ["Access", "Per-firm workspace"],
             ].map(([label, value]) => (
-              <div
-                key={label}
-                className="bg-background px-5 py-6"
-              >
+              <div key={label} className="bg-background px-5 py-6">
                 <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
                   {label}
                 </p>
-
                 <p className="mt-1 text-sm font-medium md:text-base">
                   {value}
                 </p>
@@ -484,72 +444,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section
-          id="how-it-works"
-          className="scroll-mt-14 border-b border-border py-20 md:py-28"
-        >
-          <div className="mx-auto max-w-6xl px-4 md:px-6">
-            <Reveal>
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                How it works
-              </p>
-
-              <h2 className="mt-2 max-w-xl text-2xl font-bold uppercase tracking-tight md:text-4xl">
-                One pipeline, four stages
-              </h2>
-            </Reveal>
-
-            <Reveal
-              delay={100}
-              className="mt-10"
-            >
-              <div className="overflow-hidden border border-border bg-card font-mono text-xs md:text-sm">
-                <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-                  <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
-
-                  <span className="ml-2 text-muted-foreground">
-                    rao-ai — pipeline
-                  </span>
-                </div>
-
-                <div className="divide-y divide-border">
-                  {PIPELINE.map((step, i) => (
-                    <div
-                      key={step.title}
-                      className="grid gap-3 px-4 py-5 md:grid-cols-[minmax(250px,auto)_1fr] md:items-start md:gap-8"
-                    >
-                      <div className="min-w-0 break-words">
-                        <span className="text-muted-foreground">
-                          $
-                        </span>{" "}
-                        <span className="text-foreground">
-                          {step.cmd}
-                        </span>
-                      </div>
-
-                      <p className="font-sans leading-6 text-muted-foreground">
-                        <span className="font-medium text-foreground">
-                          {`0${i + 1} ${step.title} — `}
-                        </span>
-
-                        {step.detail}
-                      </p>
-                    </div>
-                  ))}
-
-                  <div className="flex items-center gap-2 px-4 py-4 text-muted-foreground">
-                    <span>$</span>
-
-                    <span className="inline-block h-4 w-2 animate-pulse bg-foreground/70" />
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
+        {/* ── Platform Pillars ── */}
         <section
           id="platform"
           className="scroll-mt-14 border-b border-border py-20 md:py-28"
@@ -561,11 +456,11 @@ export default function LandingPage() {
               </p>
 
               <h2 className="mt-2 max-w-xl text-2xl font-bold uppercase tracking-tight md:text-4xl">
-                Four tools, one workspace
+                Four tools, one unified workspace
               </h2>
             </Reveal>
 
-            <div className="mt-10 grid overflow-hidden border border-border bg-border md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-10 grid overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-2 lg:grid-cols-4">
               {PILLARS.map(
                 (
                   {
@@ -578,15 +473,12 @@ export default function LandingPage() {
                   },
                   i
                 ) => (
-                  <Reveal
-                    key={title}
-                    delay={i * 100}
-                  >
+                  <Reveal key={title} delay={i * 100}>
                     <Link
                       href={href}
                       className="group flex min-h-[320px] h-full flex-col bg-background p-6 transition-colors hover:bg-card md:p-8"
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-border bg-accent/40">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-accent/40">
                         <Icon className="h-5 w-5" />
                       </div>
 
@@ -602,9 +494,8 @@ export default function LandingPage() {
                         {description}
                       </p>
 
-                      <span className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-medium text-foreground">
+                      <span className="mt-auto inline-flex items-center gap-1.5 pt-6 text-sm font-medium text-foreground">
                         {cta}
-
                         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                       </span>
                     </Link>
@@ -615,6 +506,7 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── Results ── */}
         <section
           id="results"
           className="scroll-mt-14 border-b border-border py-20 md:py-28"
@@ -630,14 +522,14 @@ export default function LandingPage() {
               </h2>
             </Reveal>
 
-            <div className="mt-10 grid overflow-hidden border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-10 grid overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
               {RESULTS.map(({ icon: Icon, value, label, detail }, i) => (
                 <Reveal
                   key={label}
                   delay={i * 100}
                   className="bg-background p-6 md:p-8"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center border border-border bg-accent/40">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-accent/40">
                     <Icon className="h-5 w-5" />
                   </div>
 
@@ -658,10 +550,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section
-          id="faq"
-          className="scroll-mt-14 py-20 md:py-28"
-        >
+        {/* ── FAQ Section ── */}
+        <section className="scroll-mt-14 py-20 md:py-28">
           <div className="mx-auto max-w-3xl px-4 md:px-6">
             <Reveal>
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -681,13 +571,11 @@ export default function LandingPage() {
                   <div key={item.q}>
                     <button
                       type="button"
-                      onClick={() => {
-                        setOpenFaq(open ? null : i);
-                      }}
+                      onClick={() => setOpenFaq(open ? null : i)}
                       aria-expanded={open}
                       className="flex w-full items-center justify-between gap-4 py-5 text-left"
                     >
-                      <span className="font-medium">
+                      <span className="font-medium text-base">
                         {item.q}
                       </span>
 
@@ -717,8 +605,46 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* ── Call To Action Banner ── */}
+        <section className="border-t border-border bg-card/60 py-16 md:py-20">
+          <div className="mx-auto max-w-4xl px-4 text-center md:px-6">
+            <h2 className="text-3xl font-extrabold uppercase tracking-tight md:text-5xl">
+              Ready to automate your document workflow?
+            </h2>
+            <p className="mt-4 text-muted-foreground md:text-lg">
+              Join leading finance teams and CAs saving over 80% of manual entry time.
+            </p>
+            <div className="mt-8 flex justify-center gap-4">
+              <SignedOut>
+                <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+                  <Button
+                    size="lg"
+                    className="rounded-lg bg-primary px-8 py-6 font-semibold text-primary-foreground hover:bg-primary/90 shadow-lg transition-all"
+                  >
+                    Get Started Free
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </SignUpButton>
+              </SignedOut>
+
+              <SignedIn>
+                <Link href="/dashboard">
+                  <Button
+                    size="lg"
+                    className="rounded-lg bg-primary px-8 py-6 font-semibold text-primary-foreground hover:bg-primary/90 shadow-lg transition-all"
+                  >
+                    Get Started
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              </SignedIn>
+            </div>
+          </div>
+        </section>
       </main>
 
+      {/* ── Footer ── */}
       <footer className="border-t border-border">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-[1.5fr_1fr_1fr] md:px-6">
           <div>
@@ -727,13 +653,7 @@ export default function LandingPage() {
             </p>
 
             <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
-              Invoice extraction, GST reconciliation, and Tally sync
-              for accounting teams.
-            </p>
-
-            <p className="mt-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-foreground/70" />
-              All systems operational
+              Smart invoice extraction, GST reconciliation, and automated accounting sync for finance teams.
             </p>
           </div>
 
@@ -766,7 +686,7 @@ export default function LandingPage() {
                   href="/transactions"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  Transactions &amp; Tally
+                  Transactions &amp; Export
                 </Link>
               </li>
 
@@ -806,12 +726,11 @@ export default function LandingPage() {
               </li>
 
               <li>
-                <Link
-                  href="/sign-in"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Sign in
-                </Link>
+                <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+                  <button className="text-muted-foreground hover:text-foreground">
+                    Sign in
+                  </button>
+                </SignInButton>
               </li>
             </ul>
           </div>
