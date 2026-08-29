@@ -264,9 +264,12 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center px-4 lg:px-6">
           <Link
             href="/"
-            className="text-xl font-bold tracking-tight"
+            className="flex items-center gap-3 text-xl font-bold tracking-tight"
           >
-            RAO AI
+            <span>RAO AI</span>
+            <span className="font-mono text-[11px] font-normal tracking-[0.2em] text-muted-foreground uppercase">
+              PLATFORM
+            </span>
           </Link>
 
           <nav className="ml-10 hidden items-center gap-8 font-medium text-sm text-muted-foreground md:flex">
@@ -287,20 +290,15 @@ export default function LandingPage() {
           <div className="ml-auto flex items-center gap-3">
             <SignedOut>
               <SignInButton mode="modal" forceRedirectUrl="/dashboard">
-                <Button variant="outline" className="rounded-lg font-medium border-border hover:bg-accent">
-                  Login
+                <Button className="rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 px-6 font-medium shadow-sm transition-all">
+                  Login / Register
                 </Button>
               </SignInButton>
-              <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
-                <Button className="rounded-lg bg-primary font-medium text-primary-foreground hover:bg-primary/90 shadow-sm">
-                  Register
-                </Button>
-              </SignUpButton>
             </SignedOut>
 
             <SignedIn>
               <Link href="/dashboard">
-                <Button className="rounded-lg bg-primary font-medium text-primary-foreground hover:bg-primary/90 shadow-sm">
+                <Button className="rounded-full bg-primary font-medium text-primary-foreground hover:bg-primary/90 px-6 shadow-sm">
                   Get started
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -337,7 +335,7 @@ export default function LandingPage() {
                   <Link href="/dashboard">
                     <Button
                       size="lg"
-                      className="rounded-lg bg-primary px-6 py-6 font-semibold text-primary-foreground hover:bg-primary/90 shadow-md transition-all"
+                      className="rounded-full bg-primary px-7 py-6 font-semibold text-primary-foreground hover:bg-primary/90 shadow-md transition-all"
                     >
                       Get started
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -348,7 +346,7 @@ export default function LandingPage() {
                     <Button
                       size="lg"
                       variant="outline"
-                      className="rounded-lg border-border px-6 py-6 font-semibold bg-background/50 hover:bg-accent transition-all"
+                      className="rounded-full border-border px-7 py-6 font-semibold bg-background/50 hover:bg-accent transition-all"
                     >
                       Explore platform
                     </Button>
