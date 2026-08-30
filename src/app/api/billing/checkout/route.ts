@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRazorpayInstance } from "@/lib/razorpay";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import crypto from "crypto";
 
 const INDIVIDUAL_MONTHLY_PRICE = 1499;
@@ -77,6 +78,20 @@ export async function PUT(req: Request) {
     const isAuthentic = expectedSignature === razorpay_signature;
 
     if (isAuthentic) {
+      // Mark the user as premium in Clerk publicMetadata
+      try {
+        const { userId } = await auth();
+        if (userId) {
+          const client = await clerkClient();
+          await client.users.updateUserMetadata(userId, {
+            publicMetadata: { rao_premium: true, rao_premium_since: new Date().toISOString() },
+          });
+        }
+      } catch (metaErr) {
+        console.error("[Clerk Metadata Update Error]:", metaErr);
+        // Payment is still valid even if metadata update fails
+      }
+
       return NextResponse.json({
         success: true,
         message: "Payment verified successfully",

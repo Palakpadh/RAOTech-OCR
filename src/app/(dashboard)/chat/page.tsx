@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePremiumStatus } from "@/lib/usePremiumGate";
+import { PremiumPaywall } from "@/components/PremiumPaywall";
 
 // Define the shape of a message
 type Message = {
@@ -20,6 +22,8 @@ function formatTime(d: Date) {
 }
 
 export default function ChatPage() {
+  const { premium, loading: premiumLoading } = usePremiumStatus();
+
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hello! I am RAO AI. Ask about this client's ITC, drafts, vendors, or reconciliation." }
   ]);
@@ -82,6 +86,19 @@ export default function ChatPage() {
     textTransform: "uppercase" as const,
     fontFamily: "'Inter', 'Geist Sans', system-ui, sans-serif",
   };
+
+  /* ── Premium gate ── */
+  if (premiumLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] bg-[var(--spx-canvas)]">
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--spx-muted)]" />
+      </div>
+    );
+  }
+
+  if (!premium) {
+    return <PremiumPaywall feature="AI Assistant" />;
+  }
 
   return (
     <div

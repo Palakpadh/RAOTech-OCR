@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePremiumStatus } from "@/lib/usePremiumGate";
 import {
   FileText,
   Landmark,
@@ -145,6 +146,7 @@ export default function TransactionsList({
   initialSyncFilter?: "failed" | "stuck" | null;
 }) {
   const router = useRouter();
+  const { premium } = usePremiumStatus();
 
   const [tab, setTab] = useState<"invoices" | "bank">("invoices");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -405,11 +407,15 @@ export default function TransactionsList({
           <Button
             size="sm"
             disabled={busy}
-            onClick={() =>
+            onClick={() => {
+              if (!premium) {
+                router.push("/pricing");
+                return;
+              }
               exportTally(
                 selected.size ? [...selected] : undefined
-              )
-            }
+              );
+            }}
             className="bg-green-600 hover:bg-green-500 text-white"
           >
             <Download className="mr-2 h-4 w-4" />
@@ -425,7 +431,13 @@ export default function TransactionsList({
                   `${preflight?.blockingCount} of these would be rejected by Tally. Fix them first.`
                 : undefined
             }
-            onClick={() => push.start([...selected])}
+            onClick={() => {
+              if (!premium) {
+                router.push("/pricing");
+                return;
+              }
+              push.start([...selected]);
+            }}
           >
             <Send className="mr-2 h-4 w-4" />
             Push to Tally ({selected.size})
