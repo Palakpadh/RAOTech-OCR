@@ -37,8 +37,29 @@ export interface PreflightOptions {
   bookEnding?: Date;
 }
 
-/** Amounts are floats; treat anything under half a paisa as zero. */
-const EPSILON = 0.005;
+/**
+ * Amounts are floats; treat anything under half a paisa as zero.
+ *
+ * Exported because approval and pre-flight have to be the *same* number, and
+ * they were not: the three approve routes used to allow ₹0.01 of drift while
+ * this file rejected anything over ₹0.005. A voucher out by ₹0.008 therefore
+ * approved happily and then failed pre-flight forever after — it cannot be
+ * edited (PATCH requires DRAFT) and nothing un-approves it, so it sat in the
+ * client's queue permanently unpushable.
+ *
+ * The stricter of the two wins by construction: nothing may become APPROVED
+ * that this file will later refuse to export. If this ever needs to loosen,
+ * loosen it here and only here — every approve route imports this constant, so
+ * the two sides cannot drift apart again.
+ */
+export const BALANCE_EPSILON = 0.005;
+
+/**
+ * In-file alias. `src/lib/excel/validate.ts` documents its own AMOUNT_EPSILON
+ * as "the same constant and same reasoning as `EPSILON` in
+ * `src/lib/tally/preflight.ts`", so the name that reference points at stays.
+ */
+const EPSILON = BALANCE_EPSILON;
 
 function checkName(
   voucherId: string,
@@ -86,14 +107,34 @@ export function preflightVouchers(
       }
     }
 
-    // "No accounting allocation" — Changed to warning so it does NOT block push
+    /**
+     * A voucher with nothing on it. Blocking, and it has to stay blocking.
+     *
+     * This was downgraded to a warning at some point so it would not stop a
+     * push. What that actually bought was a voucher Tally rejects every time
+     * — there is no accounting entry to post — reported back as
+     * `Voucher date is missing`, which is Tally's message for a malformed
+     * voucher and sends whoever reads it looking at the date. Measured on this
+     * database: every VoucherSync in FAILED was an empty voucher, all five
+     * carrying that message, while every healthy voucher in the queue posted.
+     *
+     * Letting it through does not make the push succeed. It converts a clear
+     * local sentence into a misleading remote one, which is the exact trade
+     * this file exists to prevent.
+     *
+     * It also escapes UNBALANCED below, because that check is guarded on
+     * `live.length > 0` — an empty voucher balances: zero equals zero.
+     */
     const live = v.lines.filter((l) => l.debit > EPSILON || l.credit > EPSILON);
     if (live.length === 0) {
       issues.push({
         voucherId: v.id,
         code: "NO_ALLOCATION",
-        severity: "warning", // ← WARNING (Does not block push)
-        message: "Every line is zero, so the voucher has no accounting allocation.",
+        severity: "error",
+        message:
+          v.lines.length === 0
+            ? "This voucher has no lines at all, so there is nothing to post. Tally rejects it as a malformed voucher and reports a missing date."
+            : "Every line is zero, so the voucher has no accounting allocation and Tally has nothing to post.",
       });
     }
 
