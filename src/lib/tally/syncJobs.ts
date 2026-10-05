@@ -769,8 +769,6 @@ async function applyVoucherResults(
   const deleting = job.kind === "VOUCHER_DELETE";
   const now = new Date();
 
-<<<<<<< HEAD
-=======
   /**
    * A job that carried vouchers and came back with no per-voucher results at
    * all tells us nothing about any single voucher — so we must not claim it
@@ -845,7 +843,6 @@ async function applyVoucherResults(
    * at all; a query on every push to serve an error message that usually never
    * appears would be the wrong trade. Resolved once per batch and cached.
    */
->>>>>>> 8567e6517113d4e803616c7210d2c7a21d76d7f1
   let stockVoucherIds: Set<string> | null = null;
   const movesStock = async (id: string): Promise<boolean> => {
     if (stockVoucherIds === null) {
