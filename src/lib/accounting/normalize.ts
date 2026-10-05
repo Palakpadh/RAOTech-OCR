@@ -1,14 +1,43 @@
 import type { NormalizedInvoice, NormalizedItem } from "./types";
 
-/** Parse a money-ish value (number or string with currency symbols) to a number. */
+/** Parse a money-ish value (number or string with currency symbols) to a number.
+ *
+ * Handles:
+ *  - Plain numbers: 396190.19
+ *  - Indian comma-separated: "3,96,190.19"  → 396190.19
+ *  - Currency-prefixed: "₹3,96,190.19"     → 396190.19
+ *  - Multiple-dot European: "3.96.190,19"   → 396190.19
+ */
 export const cleanMoney = (val: unknown): number => {
   if (typeof val === "number") return isFinite(val) ? val : 0;
   if (typeof val === "string") {
-    const n = parseFloat(val.replace(/[^0-9.-]+/g, ""));
+    // Strip currency symbols and whitespace
+    let s = val.replace(/[₹$€£\s]/g, "").trim();
+    if (!s) return 0;
+
+    // Detect European format: "1.234.567,89" (dots as thousands, comma as decimal)
+    const euroFormat = /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s);
+    if (euroFormat) {
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      // Standard / Indian: remove all commas (thousand separators), keep last dot
+      // "3,96,190.19" → "396190.19"
+      // "3.96.190.19" (multi-dot, no decimal) → treat dots as thousand sep
+      const dotCount = (s.match(/\./g) ?? []).length;
+      if (dotCount > 1) {
+        // More than one dot → all dots are thousand separators, no decimal
+        s = s.replace(/[^0-9]/g, "");
+      } else {
+        s = s.replace(/,/g, "");
+      }
+    }
+
+    const n = parseFloat(s);
     return isFinite(n) ? n : 0;
   }
   return 0;
 };
+
 
 /**
  * Parse a date value, handling Indian DD/MM/YYYY and DD-MM-YYYY formats.

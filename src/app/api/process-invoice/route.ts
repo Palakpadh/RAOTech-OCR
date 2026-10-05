@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { backendFetch } from "@/lib/backend";
 import { withRouteLogging } from "@/lib/trace";
+import { correctExtraction } from "@/lib/ocr/correctExtraction";
 
 async function processInvoice(req: Request) {
   try {
@@ -31,6 +32,18 @@ async function processInvoice(req: Request) {
     const result = await response.json();
 
     // Backend returns: { success, message, data, gst_validation, job_id, processing_time, ocr_engine, file_metadata }
+
+    // Apply post-extraction corrections for known AI model systematic errors:
+    //  1. Vendor/customer GSTIN swap (model confuses vendor vs buyer GSTIN)
+    //  2. Indian number format truncation (e.g. 3,96,190.19 read as 396.19)
+    if (result?.data && typeof result.data === "object") {
+      const { data: corrected, corrections } = correctExtraction(result.data);
+      if (corrections.length > 0) {
+        console.warn("[OCR_CORRECTION]", corrections);
+      }
+      return NextResponse.json({ ...result, data: corrected, ocr_corrections: corrections });
+    }
+
     return NextResponse.json(result);
 
   } catch (error) {

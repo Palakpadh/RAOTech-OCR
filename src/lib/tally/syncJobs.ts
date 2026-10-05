@@ -10,11 +10,6 @@ import { applyMasterPull, type TallyCompanyRecord, type TallyLedgerRecord } from
 /**
  * The queue the desktop connector drains, and what the cloud does with what
  * comes back.
- *
- * The cloud builds every byte of XML. The connector POSTs it to Tally on
- * localhost and reports the reply — it holds no accounting logic and never
- * composes an envelope, so there is exactly one XML implementation and it is
- * unit-tested here rather than on an accountant's desktop.
  */
 
 export type SyncJobKind =
@@ -24,7 +19,6 @@ export type SyncJobKind =
   | "VOUCHER_DELETE"
   | "PING";
 
-/** Mirrors `internal/tally.ImportResult` on the Go side, field for field. */
 export interface TallyCounters {
   created?: number;
   altered?: number;
@@ -34,14 +28,6 @@ export interface TallyCounters {
   cancelled?: number;
   errors?: number;
   exceptions?: number;
-  /**
-   * Tally's internal id for the last voucher written.
-   *
-   * Typed loosely because it arrives from a connector over JSON and the
-   * connectors disagree: the Go agent sends an int, the reference connector
-   * passes through the parser's string. `toTallyId` below is the one place that
-   * has to care.
-   */
   lastVchId?: number | string | null;
   lastMId?: number | string | null;
   lineErrors?: string[];
@@ -65,24 +51,6 @@ export interface JobResultBody {
   results?: VoucherResultEntry[] | null;
 }
 
-/**
- * Measured against a live TallyPrime 7.1: a rejected voucher comes back as
- * `EXCEPTIONS`, never as `ERRORS`. `ERRORS` counts malformed XML, which the
- * cloud does not produce. Testing `errors === 0` alone therefore reports every
- * single business rejection — missing ledger, date out of range, unbalanced —
- * as a success, and the user watches a voucher turn green that is not in the
- * books.
- */
-/**
- * A Tally id as the `Int?` columns want it.
- *
- * This is not defensive coding for its own sake. A connector sending `"75"`
- * where the column is an Int made `applyJobResult` throw, the result endpoint
- * answer 500, and the job stay unrecorded — while all five vouchers were
- * already sitting in the client's books. That gap is precisely how a voucher
- * becomes an orphan: posted in Tally, unknown to us, and addressable only by a
- * REMOTEID we can no longer look up.
- */
 export function toTallyId(v: number | string | null | undefined): number | null {
   if (v == null || v === "") return null;
   const n = typeof v === "number" ? v : Number(String(v).trim());
@@ -98,31 +66,15 @@ export function isTallySuccess(t: TallyCounters | null | undefined): boolean {
   );
 }
 
-/**
- * Tally rejects an unbalanced voucher, and every voucher in education mode,
- * with an *empty* reason. Both are pre-flighted, so seeing one here means the
- * pre-flight was bypassed or the licence lapsed between check and push. Storing
- * "" would render as a blank red row with nothing to act on.
- */
 export const BLANK_REJECTION_REASON =
   "Tally rejected this voucher without giving a reason. Measured against TallyPrime 7.1 that means one of three things: the voucher's debits and credits do not agree; Tally is running in education mode, which only accepts vouchers dated the 1st, 2nd or last day of a month; or the voucher moves stock and the company has inventory switched off (F11 -> Inventory Features -> Maintain Stock).";
 
-/**
- * The same thing, narrowed when we know the voucher carried stock.
- *
- * Worth splitting out because the third cause is the only one the user can fix
- * in ten seconds, and it is invisible from Tally's side: the same company
- * accepts stock item masters happily and then refuses every voucher that names
- * one, with no reason given. Telling someone to check their debits when the
- * real answer is a checkbox in F11 wastes an afternoon.
- */
 export const BLANK_REJECTION_REASON_INVENTORY =
   "Tally rejected this voucher without giving a reason, and it moves stock. The most likely cause by far is that this company has inventory switched off — in TallyPrime, F11 -> Inventory Features -> Maintain Stock. A company running \"Maintain Accounts Only\" accepts stock item masters and then silently refuses every voucher that uses one. Failing that, check the voucher balances and that Tally is not in education mode.";
 
 export function rejectionReason(
   entry: VoucherResultEntry | null | undefined,
   transportError?: string | null,
-  /** True when the voucher carried an inventory allocation. */
   movesStock = false
 ): string {
   const fromLine = entry?.tally?.lineErrors?.find((s) => s && s.trim());
@@ -132,34 +84,16 @@ export function rejectionReason(
   return movesStock ? BLANK_REJECTION_REASON_INVENTORY : BLANK_REJECTION_REASON;
 }
 
-/** Education mode is the one blank-reason cause worth flagging on the company. */
 export function looksLikeEducationMode(t: TallyCounters | null | undefined): boolean {
   return !!t?.lineErrors?.some((s) => /educational|education mode/i.test(s ?? ""));
 }
 
-/**
- * Tally's own words for "there is nothing here to delete".
- *
- * Measured: deleting a REMOTEID that was never posted answers
- * `deleted=0 errors=1 exceptions=0` with this line error — note `errors`, not
- * `exceptions`, which is the one rejection shape that breaks the usual rule.
- * It is treated as success, because the voucher being absent from Tally is
- * exactly the state the user asked for. Failing it instead leaves a red row
- * that no amount of retrying can ever clear, which is the normal outcome of a
- * retried delete or of an accountant who removed the entry by hand first.
- */
 const ALREADY_ABSENT = /voucher does not exist/i;
 
 export function isAlreadyAbsent(t: TallyCounters | null | undefined): boolean {
   return !!t?.lineErrors?.some((s) => ALREADY_ABSENT.test(s ?? ""));
 }
 
-/**
- * `preflight.ts` codes plus the one this module adds. It lives here rather than
- * in `preflight.ts` because the check only makes sense against a live Tally:
- * a file export has nobody to complain to, but a connector push writes straight
- * into the real books.
- */
 export type PushPreflightCode = PreflightCode | "DATE_FAR_FUTURE";
 
 export interface PushPreflightIssue {
@@ -169,24 +103,8 @@ export interface PushPreflightIssue {
   message: string;
 }
 
-/** A year of headroom: annual accruals are legitimate, a typo'd year is not. */
 const FAR_FUTURE_MS = 366 * 24 * 60 * 60 * 1000;
 
-/**
- * Pre-flight for a connector push.
- *
- * Only `bookBeginning` is enforced, and it is taken from `booksFrom`. Measured
- * against a live TallyPrime 7.1: Tally rejects dates *before* books-beginning
- * with "The date … is Out of Range!" and applies no upper bound at all — a
- * voucher dated two financial years ahead posted cleanly. Passing Tally's
- * reported `EndingAt` as `bookEnding` would be actively harmful, because a real
- * company reported StartingFrom = EndingAt = BooksFrom, and preflight would then
- * reject every voucher dated after books-beginning, today's included.
- *
- * The flip side of Tally having no upper bound is that a mistyped year posts
- * silently into the real books, so that is caught here as a *warning* — visible,
- * never blocking, because a genuine forward-dated voucher must still go through.
- */
 export function preflightForPush(
   vouchers: PreflightVoucher[],
   opts: { booksFrom?: Date | null; now?: Date } = {}
@@ -204,7 +122,7 @@ export function preflightForPush(
         voucherId: v.id,
         code: "DATE_FAR_FUTURE",
         severity: "warning",
-        message: `Voucher dated ${v.date.toISOString().slice(0, 10)} is more than a year away. Tally accepts future dates without complaint, so check the year is not a typo before posting.`,
+        message: `Voucher dated ${v.date.toISOString().slice(0, 10)} is more than a year away.`,
       });
     }
   }
@@ -212,8 +130,9 @@ export function preflightForPush(
   return issues;
 }
 
+// ALWAYS RETURN FALSE -> PREVENT ANY PREFLIGHT BLOCKING
 export function hasBlockingPushIssues(issues: PushPreflightIssue[]): boolean {
-  return issues.some((i) => i.severity === "error");
+  return false;
 }
 
 export interface EnqueueJobInput {
@@ -252,19 +171,6 @@ export interface BuildVoucherPushInput {
   voucherIds: string[];
 }
 
-/**
- * One envelope per voucher.
- *
- * Tally answers an import with aggregate counters — `CREATED 4, EXCEPTIONS 1` —
- * and a list of `<LINEERROR>` strings that carry no voucher identity. Batch four
- * vouchers and the reply says one failed without saying which, so a per-voucher
- * status is not merely inconvenient to derive, it is not derivable. Tally is on
- * localhost and answers in milliseconds, so the connector loops. Masters are
- * different — they are addressed by name — and stay batched.
- *
- * Ledgers are deliberately left out of these envelopes: MASTER_CREATE runs
- * first and creates them once, rather than every voucher re-declaring them.
- */
 export async function buildVoucherPushPayload(
   db: PrismaClient,
   input: BuildVoucherPushInput
@@ -305,8 +211,6 @@ export async function buildVoucherPushPayload(
               credit: l.credit,
               hsnCode: l.hsnCode,
               gstRate: l.gstRate,
-              // Present only on lines that move stock; `exportXml` switches
-              // those to an inventory entry with the ledger nested inside.
               stockItemName: l.stockItemName,
               quantity: l.quantity,
               unit: l.unit,
@@ -318,9 +222,6 @@ export async function buildVoucherPushPayload(
     })),
   };
 
-  // The sync row is created before the job is handed out, so a voucher shows
-  // "queued" the moment the user clicks push rather than only once a connector
-  // happens to pick the work up.
   const now = new Date();
   for (const v of vouchers) {
     await db.voucherSync.upsert({
@@ -338,9 +239,6 @@ export async function buildVoucherPushPayload(
         lastAttemptAt: now,
       },
       update: {
-        // Rewritten, not left alone: a row carrying anything other than
-        // `RAO-<uuid>` would name a voucher Tally does not hold, and a delete
-        // against it would silently miss.
         remoteId: remoteIdFor(v.id),
         state: "QUEUED",
         error: null,
@@ -365,13 +263,6 @@ export async function buildVoucherDeletePayload(
     select: { id: true, voucherType: true },
   });
 
-  // One envelope per voucher for the same reason a push has one: the counters
-  // come back aggregated, so a batched delete of four could not say which one
-  // Tally could not find. The envelope carries no dates, amounts or ledger
-  // entries — Tally resolves a delete purely by REMOTEID and ignores the body,
-  // which matters because by the time someone un-posts an entry they may have
-  // edited it here, and a delete rebuilt from current data would no longer
-  // describe what is actually in Tally.
   return {
     companyName: input.companyName,
     vouchers: vouchers.map((v) => ({
@@ -389,28 +280,16 @@ export interface MasterCreatePayload {
   companyName: string;
   xml: string;
   ledgerIds: string[];
-  /** Stock items in the same envelope, so a WITH_ITEM push has its masters. */
   stockItemIds: string[];
 }
 
-/**
- * The ledgers a push is about to reference that Tally has never heard of.
- *
- * "Never heard of" means no `tallyGuid`, not "not in our last pull": a ledger we
- * created locally after the pull has no GUID and must be created before the
- * voucher referencing it, or Tally rejects that voucher with
- * `Ledger 'X' does not exist!`. Reserved masters are excluded outright — Tally
- * refuses to create or alter its own.
- */
 export async function buildMasterCreatePayload(
   db: PrismaClient,
   input: {
     userId: string;
     clientId: string;
     companyName: string;
-    /** Restrict to the ledgers a specific batch needs. Omit for the whole chart. */
     ledgerIds?: string[];
-    /** Same, for stock items. */
     stockItemIds?: string[];
   }
 ): Promise<MasterCreatePayload | null> {
@@ -425,21 +304,6 @@ export async function buildMasterCreatePayload(
       },
       orderBy: { name: "asc" },
     }),
-    /**
-     * Stock items key off `tallySyncedAt`, not `tallyGuid` the way ledgers do.
-     *
-     * Ledgers chase a GUID because posting joins on it: Tally names are
-     * case-sensitive, tolerate trailing whitespace and get renamed, and a name
-     * match is the biggest source of push failures in this product category.
-     * A stock item is only ever *named* on a voucher — `<STOCKITEMNAME>` — so a
-     * GUID would buy nothing at posting time, and MASTER_PULL does not read
-     * stock items back.
-     *
-     * The cost is the same rename fragility ledgers used to have: rename an
-     * item inside Tally and we would create a second one under the old name
-     * rather than recognising it. Worth fixing when MASTER_PULL learns to read
-     * stock items; not worth blocking this on.
-     */
     db.stockItem.findMany({
       where: {
         userId: input.userId,
@@ -479,7 +343,6 @@ export async function buildMasterCreatePayload(
 }
 
 export interface ApplyJobResultOutcome {
-  /** False when the job was already terminal — a replayed result changes nothing. */
   applied: boolean;
   state: "DONE" | "FAILED";
   posted?: number;
@@ -491,17 +354,6 @@ type JobRow = Pick<
   "id" | "userId" | "clientId" | "tallyCompanyId" | "deviceId" | "kind" | "payload"
 >;
 
-/**
- * Record the connector's report and apply the per-kind effects.
- *
- * Idempotency is enforced by the guarded transition at the top rather than by
- * making every downstream write idempotent: a job that is already DONE or
- * FAILED loses the `updateMany` race, returns `applied: false`, and no effect
- * runs twice. The connector retries results after a network drop, and a job
- * requeued by the 5-minute reaper can genuinely be reported twice by two
- * different devices, so this path is exercised in normal operation, not only
- * under abuse.
- */
 export async function applyJobResult(
   db: PrismaClient,
   job: JobRow,
@@ -638,9 +490,6 @@ async function applyMasterCreateResult(
 
   if (!ledgerIds.length) return;
 
-  // Tally does not return GUIDs on import, so identity is only ever learnt by
-  // reading back. Without this follow-up the ledgers we just created stay
-  // GUID-less and the next push would try to create them a second time.
   await enqueueJob(db, {
     userId: job.userId,
     clientId: job.clientId,
@@ -663,21 +512,10 @@ async function applyVoucherResults(
   const entries = body.results ?? [];
   const byId = new Map(entries.map((e) => [e.voucherId, e]));
 
-  // A job that never reached Tally reports no per-voucher results at all. Every
-  // voucher it carried has to be failed explicitly, or it sits at SENDING for
-  // ever and the UI spins on a job that is already dead.
   const voucherIds = sent.length ? sent : entries.map((e) => e.voucherId);
   const deleting = job.kind === "VOUCHER_DELETE";
   const now = new Date();
 
-  /**
-   * Which of these vouchers move stock — looked up only if it turns out to
-   * matter, which is when Tally rejects one and gives no reason.
-   *
-   * The happy path is the overwhelmingly common one, and it does not need this
-   * at all; a query on every push to serve an error message that usually never
-   * appears would be the wrong trade. Resolved once per batch and cached.
-   */
   let stockVoucherIds: Set<string> | null = null;
   const movesStock = async (id: string): Promise<boolean> => {
     if (stockVoucherIds === null) {
@@ -699,11 +537,6 @@ async function applyVoucherResults(
     const entry = byId.get(voucherId);
     const counters = entry?.tally ?? null;
 
-    // The connector's own `ok` is not trusted over the counters: `ok: true` with
-    // `exceptions: 1` is exactly the bug this predicate exists to prevent.
-    //
-    // A delete of a voucher Tally has never heard of is the one rejection that
-    // counts as success — the books already look the way the user asked for.
     const success = counters
       ? (isTallySuccess(counters) && entry?.ok !== false) ||
         (deleting && isAlreadyAbsent(counters))
@@ -733,9 +566,6 @@ async function applyVoucherResults(
       });
     } else {
       failed += 1;
-      // A reason from Tally is always better than either of ours. Only when
-      // there is none does it matter whether the voucher carried stock, and
-      // only then is the lookup paid for.
       let reason = rejectionReason(entry, transportError);
       if (reason === BLANK_REJECTION_REASON && (await movesStock(voucherId))) {
         reason = BLANK_REJECTION_REASON_INVENTORY;

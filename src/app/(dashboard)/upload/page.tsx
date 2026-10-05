@@ -54,6 +54,8 @@ type UploadDoc = {
   // "Similar party" prompt shown after extraction
   ledgerSuggestion: LedgerSuggestion | null;
   ledgerChoice: "previous" | "new" | null;
+  /** Auto-corrections applied by the post-extraction layer (e.g. GSTIN swap, amount scaling). */
+  ocrCorrections: string[];
 };
 
 const VIA_LABEL: Record<string, string> = {
@@ -189,6 +191,7 @@ export default function UploadPage() {
         saved: false,
         ledgerSuggestion: null,
         ledgerChoice: null,
+        ocrCorrections: [],
       }));
 
       return [...prev, ...nextDocs];
@@ -264,6 +267,7 @@ export default function UploadPage() {
               saved: false,
               ledgerSuggestion: null,
               ledgerChoice: null,
+              ocrCorrections: [],
             }
           : d
       )
@@ -285,6 +289,7 @@ export default function UploadPage() {
       }
 
       const extracted = json.data || json;
+      const corrections: string[] = Array.isArray(json.ocr_corrections) ? json.ocr_corrections : [];
       // Refine type from extracted content
       const refined = detectDocumentType({ fileName: doc.file.name, extracted });
       if (refined === "bank") setDocType("bank");
@@ -301,6 +306,7 @@ export default function UploadPage() {
                 ocrEngine: json.ocr_engine || null,
                 extracting: false,
                 error: null,
+                ocrCorrections: corrections,
               }
             : d
         )
@@ -325,6 +331,7 @@ export default function UploadPage() {
       );
     }
   };
+
 
   // Ask the backend whether this vendor was mapped to a ledger before.
   const fetchLedgerSuggestion = async (id: string, extracted: ExtractedData) => {
@@ -816,6 +823,22 @@ export default function UploadPage() {
               >
                 <XCircle className="h-5 w-5 shrink-0" />
                 <p className="text-sm">{doc.error}</p>
+              </div>
+            )}
+
+            {doc.ocrCorrections && doc.ocrCorrections.length > 0 && (
+              <div
+                className="flex items-start gap-2"
+                style={{ border: "1px solid #78350f", background: "rgba(120,53,15,0.15)", padding: "10px 14px", color: "#fcd34d" }}
+              >
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium mb-1">Auto-correction applied</p>
+                  {doc.ocrCorrections.map((c, i) => (
+                    <p key={i} className="text-xs opacity-80">{c}</p>
+                  ))}
+                  <p className="text-xs mt-1 opacity-60">Please verify the values below are correct before saving.</p>
+                </div>
               </div>
             )}
 
