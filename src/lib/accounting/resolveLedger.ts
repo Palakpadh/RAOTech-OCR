@@ -249,17 +249,36 @@ export async function resolveLedgersForInvoice(
    */
   const isPurchaseSide = voucherType === "PURCHASE" || voucherType === "DEBIT_NOTE";
 
-  // System ledgers
-  const cgst = findSystem(ledgers, (l) =>
-    isPurchaseSide ? l.name === "CGST Input" : l.name === "CGST Output"
-  );
-  const sgst = findSystem(ledgers, (l) =>
-    isPurchaseSide ? l.name === "SGST Input" : l.name === "SGST Output"
-  );
-  const igst = findSystem(ledgers, (l) =>
-    isPurchaseSide ? l.name === "IGST Input" : l.name === "IGST Output"
-  );
-  const roundOff = findSystem(ledgers, (l) => l.ledgerType === "ROUND_OFF");
+  // System ledgers with flexible matching + auto-creation fallback so tax lines are never unmapped
+  const findTax = (taxType: "CGST" | "SGST" | "IGST") => {
+    const isInput = isPurchaseSide;
+    const kindStr = isInput ? "INPUT" : "OUTPUT";
+    const pattern = new RegExp(`\\b${taxType}\\b`, "i");
+
+    // 1. Exact or contains taxType + Input/Output
+    let match = ledgers.find((l) => {
+      const u = l.name.toUpperCase();
+      return pattern.test(u) && u.includes(kindStr);
+    });
+
+    // 2. Contains taxType (e.g. "IGST", "IGST Tax")
+    if (!match) {
+      match = ledgers.find((l) => pattern.test(l.name));
+    }
+
+    // 3. Match by ledgerType
+    if (!match) {
+      const typeWanted: LedgerType = isInput ? "TAX_INPUT" : "TAX_OUTPUT";
+      match = ledgers.find((l) => l.ledgerType === typeWanted);
+    }
+
+    return match ?? null;
+  };
+
+  const cgst = findTax("CGST");
+  const sgst = findTax("SGST");
+  const igst = findTax("IGST");
+  const roundOff = findSystem(ledgers, (l) => l.ledgerType === "ROUND_OFF" || /round\s*off/i.test(l.name));
   const discount = findSystem(
     ledgers,
     (l) => l.name === (isPurchaseSide ? "Discount Received" : "Discount Allowed")
