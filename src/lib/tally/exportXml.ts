@@ -137,10 +137,14 @@ function esc(s: string) {
     .replace(/"/g, "&quot;");
 }
 
-function tallyDate(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+function tallyDate(d: Date | null | undefined): string {
+  let dateObj = d;
+  if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+    dateObj = new Date();
+  }
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
   return `${y}${m}${day}`;
 }
 

@@ -40,20 +40,52 @@ export const cleanMoney = (val: unknown): number => {
 
 
 /**
- * Parse a date value, handling Indian DD/MM/YYYY and DD-MM-YYYY formats.
- * Falls back to the current date when unparseable (matches prior behaviour).
+ * Parse a date value, handling Indian formats like DD/MM/YYYY, DD-MM-YY, 14-Sep-26, 14-Sep-2026.
+ * Falls back to current date when unparseable so Tally dates are never missing or NaN.
  */
 export const cleanDate = (val: unknown): Date => {
   if (!val) return new Date();
   if (val instanceof Date) return isNaN(val.getTime()) ? new Date() : val;
   if (typeof val === "string") {
-    const ddmmyyyy = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    const s = val.trim();
+    if (!s) return new Date();
+
+    // 1. DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY or DD/MM/YY (support 2-digit and 4-digit years)
+    const ddmmyyyy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
     if (ddmmyyyy) {
-      const d = new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`);
-      if (!isNaN(d.getTime())) return d;
+      const day = parseInt(ddmmyyyy[1], 10);
+      const month = parseInt(ddmmyyyy[2], 10);
+      let year = parseInt(ddmmyyyy[3], 10);
+      if (year < 100) year += 2000;
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        const d = new Date(year, month - 1, day);
+        if (!isNaN(d.getTime())) return d;
+      }
     }
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? new Date() : d;
+
+    // 2. DD-MMM-YY or DD-MMM-YYYY (e.g. "14-Sep-26", "14-Sep-2026", "14 Sep 2026")
+    const ddmmmyyyy = s.match(/^(\d{1,2})[\/\-\.\s]+([a-zA-Z]{3,9})[\/\-\.\s]+(\d{2,4})$/);
+    if (ddmmmyyyy) {
+      const day = parseInt(ddmmmyyyy[1], 10);
+      const monthStr = ddmmmyyyy[2].toLowerCase();
+      let year = parseInt(ddmmmyyyy[3], 10);
+      if (year < 100) year += 2000;
+      const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+      const monthIdx = months.findIndex((m) => monthStr.startsWith(m));
+      if (monthIdx !== -1 && day >= 1 && day <= 31) {
+        const d = new Date(year, monthIdx, day);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+
+    // 3. Fallback to standard JS Date parsing
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      if (d.getFullYear() < 1970 && d.getFullYear() >= 1900) {
+        d.setFullYear(d.getFullYear() + 100);
+      }
+      return d;
+    }
   }
   return new Date();
 };
