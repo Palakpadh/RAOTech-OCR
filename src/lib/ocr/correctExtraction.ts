@@ -4,10 +4,11 @@
  * The AI/OCR model (Google Gemma-3-12B-IT) makes two systematic errors on
  * Indian tax invoices:
  *
- * 1. GSTIN SWAP — It copies the customer's GSTIN into `vendor_gstin` when the
- *    vendor block appears above the consignee/buyer blocks. We detect the swap by:
+ * 1. GSTIN SWAP & MISASSIGNMENT — It copies the customer's GSTIN into `vendor_gstin` when the
+ *    vendor block appears above the consignee/buyer blocks. We detect the swap/misassignment by:
  *    a) Checking state code against vendor address state.
  *    b) Comparing PAN (chars 3-12 of GSTIN) & 5th char of PAN (1st letter of entity name).
+ *    c) Searching OCR payload for GSTIN matching vendor name initial when misassigned.
  *
  * 2. AMOUNT TRUNCATION — Indian number formatting uses commas as thousand
  *    separators (e.g. "3,96,190.19"). The model sometimes reads only the last
@@ -68,6 +69,26 @@ function addressMatchesStateCode(address: unknown, code: string): boolean {
   return keywords.some((kw) => addr.includes(kw));
 }
 
+function findGstinForEntity(rawObj: unknown, entityInitial: string, excludeGstin?: string): string | null {
+  if (!rawObj || !entityInitial) return null;
+  try {
+    const jsonStr = JSON.stringify(rawObj);
+    const matches = jsonStr.match(/\b\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b/g) ?? [];
+    const targetInitial = entityInitial.charAt(0).toUpperCase();
+
+    for (const gstin of matches) {
+      if (excludeGstin && gstin.toUpperCase() === excludeGstin.toUpperCase()) continue;
+      // 7th char of GSTIN (index 6) matches entity name initial
+      if (gstin.charAt(6).toUpperCase() === targetInitial) {
+        return gstin.toUpperCase();
+      }
+    }
+  } catch {
+    /* ignore JSON stringify errors */
+  }
+  return null;
+}
+
 // ─── Amount-in-words parser ────────────────────────────────────────────────
 
 const ONES: Record<string, number> = {
@@ -85,9 +106,6 @@ const MULTIPLIERS: Record<string, number> = {
   crore: 1_00_00_000, million: 1_000_000, billion: 1_000_000_000,
 };
 
-/**
- * Parse "Four Lakh Sixteen Thousand Only" → 416000.
- */
 export function parseAmountInWords(raw: unknown): number | null {
   if (typeof raw !== "string" || !raw.trim()) return null;
 
@@ -133,7 +151,7 @@ export function correctExtraction(raw: ExtractedData): {
   const data: ExtractedData = { ...raw };
   const corrections: string[] = [];
 
-  // ── 1. GSTIN swap correction ──────────────────────────────────────────────
+  // ── 1. GSTIN swap & misassignment correction ─────────────────────────────────
 
   const vendorGstin = typeof data.vendor_gstin === "string" ? data.vendor_gstin.trim().toUpperCase() : null;
   const customerGstin = typeof data.customer_gstin === "string" ? data.customer_gstin.trim().toUpperCase() : null;
@@ -169,7 +187,6 @@ export function correctExtraction(raw: ExtractedData): {
     }
 
     // Criteria C: 7th char of GSTIN (5th char of PAN) matches entity name initial
-    // Indian GSTIN format: 24 (state) + 4 letters + 1 letter (5th of PAN = 1st letter of entity name)
     if (!shouldSwap && vendorName && customerName && vendorGstin.length >= 7 && customerGstin.length >= 7) {
       const vInitial = vendorName.charAt(0).toUpperCase();
       const cInitial = customerName.charAt(0).toUpperCase();
@@ -191,6 +208,23 @@ export function correctExtraction(raw: ExtractedData): {
     }
   }
 
+  // Criteria D: If vendor_gstin does not match vendorName initial, but matches customerName initial:
+  // Search raw OCR payload for a GSTIN matching vendorName initial (e.g. 'K' for Kalpataru -> 24AATFK1007E1ZO).
+  const currentVendorGstin = typeof data.vendor_gstin === "string" ? data.vendor_gstin.trim().toUpperCase() : null;
+  if (vendorName && currentVendorGstin && currentVendorGstin.length >= 7) {
+    const vInitial = vendorName.charAt(0).toUpperCase();
+    const vGstinInitial = currentVendorGstin.charAt(6);
+    if (vInitial !== vGstinInitial) {
+      const correctVendorGstin = findGstinForEntity(raw, vInitial, currentVendorGstin);
+      if (correctVendorGstin) {
+        data.vendor_gstin = correctVendorGstin;
+        corrections.push(
+          `Vendor GSTIN corrected to ${correctVendorGstin} (matched vendor name initial '${vInitial}' from OCR payload)`
+        );
+      }
+    }
+  }
+
   // ── 2. Amount truncation correction ──────────────────────────────────────
 
   const rawTotal = typeof data.total_amount === "number"
@@ -198,7 +232,6 @@ export function correctExtraction(raw: ExtractedData): {
     : parseFloat(String(data.total_amount ?? "").replace(/[^0-9.]/g, ""));
 
   if (isFinite(rawTotal) && rawTotal > 0) {
-    // 2a. Parse "amount in words"
     const wordsTotal = parseAmountInWords(data.amount_in_words as unknown);
     if (wordsTotal !== null && wordsTotal > 0) {
       const ratio = wordsTotal / rawTotal;
@@ -213,7 +246,6 @@ export function correctExtraction(raw: ExtractedData): {
       }
     }
 
-    // 2b. Line-item sum check
     if (Array.isArray(data.items) && data.items.length > 0) {
       let itemSum = 0;
       for (const item of data.items as ExtractedData[]) {

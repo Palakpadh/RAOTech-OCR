@@ -14,9 +14,9 @@ describe("correctExtraction", () => {
     const raw = {
       vendor: "KALPATARU AUTOMOBILES - (2026-27)",
       vendor_address: "Near Shri Hari Party Plot, Kalol-Mansa Road, Kalol,Dist:Gandhinagar Gujarat",
-      vendor_gstin: "24AABCJ8501F1ZY", // Customer's GSTIN accidentally extracted as Vendor GSTIN
+      vendor_gstin: "24AABCJ8501F1ZY",
       customer_name: "Jsw Infrastructure Pvt. Ltd.",
-      customer_gstin: "24AATFK1007E1ZO", // Vendor's GSTIN accidentally extracted as Customer GSTIN
+      customer_gstin: "24AATFK1007E1ZO",
       total_amount: 416,
       amount_in_words: "Four Lakh Sixteen Thousand Only",
       subtotal: 396.19,
@@ -29,16 +29,34 @@ describe("correctExtraction", () => {
 
     const { data, corrections } = correctExtraction(raw);
 
-    // GSTIN swap corrected
     expect(data.vendor_gstin).toBe("24AATFK1007E1ZO");
     expect(data.customer_gstin).toBe("24AABCJ8501F1ZY");
-
-    // Amount scaled by 1000 from 416 -> 416000
     expect(data.total_amount).toBe(416000);
     expect(data.subtotal).toBe(396190);
     expect(data.cgst).toBe(9900);
     expect(data.sgst).toBe(9900);
     expect(corrections.length).toBeGreaterThan(0);
+  });
+
+  it("finds correct vendor GSTIN from raw OCR text when both vendor and customer GSTIN are extracted as customer GSTIN", () => {
+    const raw = {
+      vendor: "KALPATARU AUTOMOBILES - (2026-27)",
+      vendor_address: "Kalol, Gujarat",
+      vendor_gstin: "24AABCJ8501F1ZY",
+      customer_name: "Jsw Infrastructure Pvt. Ltd.",
+      customer_gstin: "24AAACJ8501F1ZY",
+      total_amount: 416000,
+      amount_in_words: "Four Lakh Sixteen Thousand Only",
+      subtotal: 396190,
+      cgst: 9904.75,
+      sgst: 9904.75,
+      raw_ocr_text: "GSTIN/UIN: 24AATFK1007E1ZO Company PAN: AATFK1007E Seller: KALPATARU AUTOMOBILES"
+    };
+
+    const { data, corrections } = correctExtraction(raw);
+
+    expect(data.vendor_gstin).toBe("24AATFK1007E1ZO");
+    expect(corrections.some(c => c.includes("24AATFK1007E1ZO"))).toBe(true);
   });
 });
 
