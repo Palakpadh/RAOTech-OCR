@@ -10,7 +10,7 @@ import {
   useTransform,
   useVelocity,
   type MotionValue,
-} from "motion/react";
+} from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const ScrollVelocityContext = createContext<MotionValue<number> | null>(null);
