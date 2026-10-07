@@ -202,7 +202,7 @@ export async function buildVoucherPushPayload(
             voucherType: v.voucherType,
             date: v.date,
             narration: v.narration,
-            partyName: v.invoice?.vendor,
+            partyName: v.lines.find((l) => l.role === "PARTY")?.ledgerNameSnapshot || v.invoice?.vendor,
             invoiceNumber: v.invoice?.invoiceNumber,
             lines: v.lines.map((l) => ({
               ledgerName: l.ledgerNameSnapshot || "Unknown",

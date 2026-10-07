@@ -122,6 +122,61 @@ export async function createDraftVoucherForInvoice(
     }
   }
 
+  // Fallback: If no party ledger was mapped by rules or memory, but the invoice names a vendor/customer,
+  // find or auto-create a PARTY ledger under Sundry Creditors (or Debtors for Sales) so
+  // Tally creates and posts against this vendor instead of leaving it unmapped or defaulting to 'Unknown'.
+  const partyVendorName = (voucherType === "SALE" ? inv.customerName : inv.vendor)?.trim();
+  if (!resolved.party && !opts.forceNewParty && partyVendorName) {
+    const existingLedgers = await prisma.ledger.findMany({
+      where: { userId, clientId, ledgerType: "PARTY" },
+      select: { id: true, name: true },
+    });
+    const normVendor = normName(partyVendorName);
+    const match = existingLedgers.find(
+      (l) => l.name === partyVendorName || (normVendor && normName(l.name) === normVendor)
+    );
+
+    if (match) {
+      resolved.party = { id: match.id, name: match.name, confidence: 0.9, via: "NAME_MEMORY" };
+    } else {
+      const partyGroup = voucherType === "SALE" ? "SUNDRY_DEBTORS" : "SUNDRY_CREDITORS";
+      const partyGstin = voucherType === "SALE" ? inv.customerGstin : inv.vendorGstin;
+      const newLedger = await prisma.ledger.create({
+        data: {
+          userId,
+          clientId,
+          name: partyVendorName,
+          group: partyGroup,
+          ledgerType: "PARTY",
+          parentGstin: partyGstin || null,
+        },
+      });
+      resolved.party = { id: newLedger.id, name: newLedger.name, confidence: 1.0, via: "DEFAULT" };
+
+      if (partyGstin) {
+        await prisma.ledgerMapping.upsert({
+          where: {
+            userId_clientId_matchType_matchKey: {
+              userId,
+              clientId,
+              matchType: "GSTIN",
+              matchKey: partyGstin,
+            },
+          },
+          create: {
+            userId,
+            clientId,
+            matchType: "GSTIN",
+            matchKey: partyGstin,
+            ledgerId: newLedger.id,
+            hitCount: 1,
+          },
+          update: { ledgerId: newLedger.id, hitCount: { increment: 1 } },
+        }).catch(() => {/* non-critical */});
+      }
+    }
+  }
+
   // Apply the caller's explicit ledger choices over whatever resolution found.
   // Names are looked up in one query so the voucher line carries a snapshot;
   // `buildVoucher` writes `ledgerNameSnapshot` from it, and a null snapshot is
